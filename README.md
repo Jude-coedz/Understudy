@@ -113,7 +113,7 @@ http://127.0.0.1:43127
 * Zustand
 * Anthropic API
 * Claude
-* Lovable
+
 
 The demo intentionally has **no authentication or database**. Data is persisted locally in the browser.
 
@@ -129,6 +129,4 @@ It's to make the knowledge inside people's heads easier to capture and pass on.
 
 ## License
 
-MIT
 
-See [`HANDOFF.md`](HANDOFF.md) for the product rules and project structure.
