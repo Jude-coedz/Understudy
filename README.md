@@ -1,20 +1,96 @@
 # Understudy
 
-Capture operational knowledge in a small business *before people leave*. This is a working product demo, not a platform.
+**Understudy helps small businesses capture the knowledge their employees carry in their heads before they leave.**
 
-Demo world: **FastTrack Dispatch**, a Lagos logistics shop. Three people already interviewed. Twenty-one seeded records. One intentional dispute (Musa / urgent jobs).
+When someone leaves a small business, they often take important knowledge with them: which customers to avoid, why a particular route doesn't work, how a process actually gets done, or what went wrong the last time someone tried something.
 
-The product is judged on three things:
+Most documentation tools turn this into neat notes and checklists. Understudy takes a different approach. It keeps the **reasoning and context behind the knowledge**, including who said it, what happened, and when it was learned.
 
-1. **Keep the why.** File the speaker’s reasoning (Pidgin, incidents, names), not a tidy wiki line.
-2. **Ask sparingly.** Questions come from gaps (missing topic, thin why, disagreement), not a survey.
-3. **Brief, don’t search.** Natural-language questions return a briefing with provenance. Disagreements stay as both sides. Unknowns return a gap, not a guess.
+## What it does
 
-On top of that: disputes, freshness/decay, coverage (who would break the shop this week), handover packs.
+Understudy is a working product demo built around a fictional Lagos logistics company called **FastTrack Dispatch**.
 
-## Run it
+It has four main parts:
 
-Node.js 20+. Anthropic key optional — Capture, Ask, and handover still run via a local fallback.
+### Knowledge
+
+A central view of everything the business has learned from its employees.
+
+Each piece of knowledge keeps its original context and source instead of reducing it to a generic statement.
+
+The system also highlights:
+
+* Conflicting information
+* Knowledge that may be becoming outdated
+* Topics known by only one person
+* Areas where the business has very little information
+
+### Ask
+
+Instead of searching through documentation, users can ask questions in natural language.
+
+For example:
+
+> Who shouldn't we use for urgent jobs?
+
+Understudy builds a briefing from the knowledge it has collected and shows where each piece of information came from.
+
+If two employees disagree, **both perspectives are shown**.
+
+If the business has never recorded an answer, Understudy returns a knowledge gap instead of making one up.
+
+### Coverage
+
+Coverage shows which employees hold knowledge about which parts of the business.
+
+This makes it easy to identify risks such as:
+
+* Only one person knows how a particular route works
+* Only one person understands a critical process
+* A topic has conflicting information
+* Important areas have barely been documented
+
+This helps answer a practical question:
+
+**"If someone left this week, what would we suddenly not know?"**
+
+### Capture
+
+Capture simulates an interview with an employee.
+
+The system identifies areas where more information is needed and asks targeted follow-up questions instead of running through a generic questionnaire.
+
+The employee's answer is then extracted into structured knowledge, while still preserving the original reasoning and context.
+
+If the new information conflicts with something already recorded, Understudy keeps both sides instead of silently overwriting the existing knowledge.
+
+## Demo
+
+The demo uses **FastTrack Dispatch**, a fictional Lagos logistics business.
+
+It comes with seeded data so you can explore the product immediately.
+
+Try these flows:
+
+1. Open **Knowledge** and explore the existing records.
+2. Go to **Ask** and ask:
+   `Who shouldn't we use for urgent jobs?`
+3. Notice that the system surfaces both sides of the disagreement rather than choosing one.
+4. Ask about something that has never been documented and see how the system identifies a knowledge gap.
+5. Open **Coverage** to see where knowledge is concentrated or missing.
+6. Use **Capture** to simulate an employee interview and add new knowledge.
+7. Explore the handover flow to see what information would matter if someone became unavailable.
+
+## Running locally
+
+### Requirements
+
+* Node.js 20+
+* An Anthropic API key is optional.
+
+The main Capture, Ask, and handover flows can run using the local fallback without an API key.
+
+### Installation
 
 ```bash
 npm install
@@ -22,22 +98,37 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
+Then open:
 
-## 15-minute walkthrough
+```text
+http://127.0.0.1:43127
+```
 
-1. **Knowledge (`/`)** — Twenty-one cards. Reasoning is always visible. Filter **Disputes**: KR-006 (Emeka) vs KR-021 (Bola) on Musa. Filter **Aging / stale** for routes and warnings that have decayed. **Reset demo** restores the seed. **New business** empties the store.
+## Tech stack
 
-2. **Ask (`/ask`)** — Send: *Who shouldn’t we use for urgent jobs?* You must see **both** Emeka and Bola. Averaging or hiding Emeka is a product failure. Citation chips look like `KR-010 · Emeka · 2w ago`. Then ask something the shop never filed (a ferry in Apapa). You should get a **gap**, not a guess.
+* Next.js 16
+* React 19
+* TypeScript
+* Tailwind CSS 4
+* Zustand
+* Anthropic API
+* Claude
+* Lovable
 
-3. **Coverage (`/coverage`)** — People × topics. Empty / thin / dense. A **ring** is a sole holder (Emeka on routes, Tunde on generator). A **dot** is a dispute or stale cell. Click a cell → panel → Capture. Extraction eval badge should read **8/8**. **If X is out** builds a 1- or 2-week handover pack.
+The demo intentionally has **no authentication or database**. Data is persisted locally in the browser.
 
-4. **Capture (`/capture`)** — Simulated interview. Read **Asking because**. Answer in the speaker’s voice. Edit the live extraction on the right before save. If it would dispute Musa, it **warns and files a second side** — it does not overwrite.
+## Why I built it
 
-If Musa is missing after a pull, hit **Reset demo**. Older `localStorage` predates KR-021; store migrate v2 injects it when KR-006 exists without it.
+Understudy explores a simple question:
 
-## Stack
+**What if business knowledge was treated as something that needs to be actively captured, challenged, and handed over, rather than something people are expected to write down themselves?**
 
-Next.js 16 App Router, React 19, TypeScript, Tailwind 4, Zustand persist `understudy-kb` v2. No auth, no database, no component library. MIT.
+The goal isn't to build another company wiki.
 
-See [HANDOFF.md](HANDOFF.md) for the file map and product rules.
+It's to make the knowledge inside people's heads easier to capture and pass on.
+
+## License
+
+MIT
+
+See [`HANDOFF.md`](HANDOFF.md) for the product rules and project structure.
