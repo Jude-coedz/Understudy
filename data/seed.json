@@ -1,0 +1,235 @@
+{
+  "businessName": "FastTrack Dispatch",
+  "people": [
+    {
+      "id": "emeka",
+      "name": "Emeka Okonkwo",
+      "role": "Senior dispatch rider",
+      "tenure": "3 years"
+    },
+    {
+      "id": "tunde",
+      "name": "Tunde Adebayo",
+      "role": "Operations / maintenance",
+      "tenure": "4 years"
+    },
+    {
+      "id": "bola",
+      "name": "Bola Adeyemi",
+      "role": "Customer relations",
+      "tenure": "2 years"
+    }
+  ],
+  "records": [
+    {
+      "id": "KR-001",
+      "knowledge": "For Ikoyi and VI jobs in the rain, send riders through Falomo, never Third Mainland.",
+      "reasoning": "That Third Mainland, once rain start, you go jam till 4. Last July I lose two hospital runs because of that bridge. Falomo slow but you go reach.",
+      "topic": "delivery-routes",
+      "peopleMentioned": [],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-08-28T10:14:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-002",
+      "knowledge": "Morning island jobs go out before any mainland run.",
+      "reasoning": "Island customers dey pay extra for 9am. If you mix them with Agege, the island ones go start calling Bola by 8:30.",
+      "topic": "delivery-routes",
+      "peopleMentioned": ["Bola"],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-05-12T09:02:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-003",
+      "knowledge": "Call before arriving at Lekki Phase 1 estates; gates will not open for unannounced bikes.",
+      "reasoning": "Security for those palaces no go open if you just horn. I wait 40 minutes one time at Pinnock until the oga pick my call.",
+      "topic": "customer-handling",
+      "peopleMentioned": [],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-07-20T15:40:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-004",
+      "knowledge": "Change engine oil every 1,200 km or two weeks, whichever comes first, on the Boxer bikes.",
+      "reasoning": "These Boxer engines, if you wait for 2,000 like the manual, the oil go black and the bike go knock. We lose one engine December because Chidi was waiting for service day.",
+      "topic": "vehicle-maintenance",
+      "peopleMentioned": ["Chidi"],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-08-15T11:20:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-005",
+      "knowledge": "Start the Lister at 4:30pm on weekdays before PHCN takes light; never run it past 10pm unless a night packing is on.",
+      "reasoning": "If you wait until light cut, the starter battery dey weak and you go dey pull rope like 2010. Neighbours for the compound already complain after 10.",
+      "topic": "generator",
+      "peopleMentioned": [],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-03-02T16:05:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-006",
+      "knowledge": "Do not give Musa urgent jobs. Use Chidi.",
+      "reasoning": "Sallah weekend Musa disappeared with two hospital runs in the box. Customer for LUTH was shouting. Chidi is the one that picks even when rain dey fall.",
+      "topic": "warnings",
+      "peopleMentioned": ["Musa", "Chidi"],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-06-18T08:30:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-007",
+      "knowledge": "If a parcel is more than 30 minutes late, call the customer before they call us; offer a ₦500 credit, not a long apology.",
+      "reasoning": "These VI people no want sorry oh. They want to know you saw it. The 500 naira credit dey calm them more than ten minutes of Pidgin.",
+      "topic": "customer-handling",
+      "peopleMentioned": [],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-09-01T12:10:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-008",
+      "knowledge": "Collect cash-on-delivery into the shop POS, not rider personal accounts. Riders settle at close of day with Tunde.",
+      "reasoning": "One time a rider forget 45k from three COD. Since we force POS, the money dey enter before the bike leave the gate.",
+      "topic": "payments",
+      "peopleMentioned": ["Tunde"],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-08-22T17:45:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-009",
+      "knowledge": "Buy Boxer spares from Alhaji at Ladipo, stall 14, not Computer Village.",
+      "reasoning": "Computer Village go sell you Taiwan copy. Alhaji parts last. We change a clutch three times until I start going Ladipo myself.",
+      "topic": "suppliers",
+      "peopleMentioned": ["Alhaji"],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-07-01T13:00:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-010",
+      "knowledge": "For Ajah to the Island after 3pm, use Lekki-Epe then Admiralty, not the coastal road.",
+      "reasoning": "Coastal road that time, the sand and the touts go hold you. Admiralty longer on map but I dey clock it 20 minutes faster.",
+      "topic": "delivery-routes",
+      "peopleMentioned": [],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-08-26T14:22:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-011",
+      "knowledge": "Keys for the night locker live in the blue tin behind the kettle, not in the drawer.",
+      "reasoning": "Drawer dey too obvious. Last year somebody enter and the tin save the POS and the spare keys. Only me, Tunde, and Emeka know.",
+      "topic": "office",
+      "peopleMentioned": ["Tunde", "Emeka"],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-01-15T09:40:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-012",
+      "knowledge": "Punctures on the Island go to Mama Tyre at Obalende, not the shop on Adeola Odeku.",
+      "reasoning": "Adeola Odeku guys go charge you VI price and still use leftover tube. Mama Tyre know our bikes and she no dey delay hospital runs.",
+      "topic": "vehicle-maintenance",
+      "peopleMentioned": ["Mama Tyre"],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-08-10T10:55:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-013",
+      "knowledge": "Never send a new rider to Alausa secretariat without a printed waybill and national ID.",
+      "reasoning": "Security there seize Chidi small brother for two hours. They no gree the app show am. Paper and ID, e be the only language.",
+      "topic": "warnings",
+      "peopleMentioned": ["Chidi"],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-09-03T08:12:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-014",
+      "knowledge": "Mrs. Durojaiye (Ikoyi) always wants the parcel left with the housekeeper named Grace, never at the gate.",
+      "reasoning": "Gate man lose one envelope of documents December. She almost leave us. Grace go sign and snap the waybill.",
+      "topic": "customer-handling",
+      "peopleMentioned": ["Mrs. Durojaiye", "Grace"],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-04-02T11:18:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-015",
+      "knowledge": "Diesel comes from the filling station on Agege Motor Road; do not buy roadside drums.",
+      "reasoning": "Roadside diesel mix with kerosene. The Lister cough for a week. Agege Motor Road receipt, I fit show if the gen warranty people come.",
+      "topic": "generator",
+      "peopleMentioned": [],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-08-01T15:30:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-016",
+      "knowledge": "Riders must photograph the signed waybill before leaving the customer, even for known houses.",
+      "reasoning": "One Ikeja customer swear say e no collect. The photo save us. Bola no fit argue with I no see am if the picture dey.",
+      "topic": "payments",
+      "peopleMentioned": ["Bola"],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-08-20T16:08:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-017",
+      "knowledge": "Corporate accounts (Shoprite, MedPlus) invoice Fridays; do not chase riders for those jobs.",
+      "reasoning": "Those ones pay 14 days. If you dey ask the rider for cash, you go confuse the book. I raise invoice, Tunde no touch that money.",
+      "topic": "payments",
+      "peopleMentioned": ["Tunde"],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-09-05T09:25:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-018",
+      "knowledge": "Friday 5pm is wash and chain day; no bike leaves Saturday dirty.",
+      "reasoning": "Chain snap on Third Mainland one Saturday because Chidi skip Friday. Now if the chain no shine, the bike no start weekend work.",
+      "topic": "vehicle-maintenance",
+      "peopleMentioned": ["Chidi"],
+      "sourcePersonId": "tunde",
+      "capturedAt": "2026-08-08T17:00:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-019",
+      "knowledge": "Surulere and Yaba jobs pair together; do not mix them with Isolo in the same run.",
+      "reasoning": "Isolo go eat the whole afternoon. If you carry Yaba plus Isolo, the Yaba customer go tweet us. I split them since 2024.",
+      "topic": "delivery-routes",
+      "peopleMentioned": [],
+      "sourcePersonId": "emeka",
+      "capturedAt": "2026-09-02T07:50:00.000Z",
+      "confidence": "high"
+    },
+    {
+      "id": "KR-020",
+      "knowledge": "WhatsApp voice notes to customers only after 7am and before 8pm; text after that.",
+      "reasoning": "I voice-note one oga 9:30pm, e report us. Text e fit read in the morning. Voice na for when them dey expect the bike.",
+      "topic": "customer-handling",
+      "peopleMentioned": [],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-08-18T19:40:00.000Z",
+      "confidence": "medium"
+    },
+    {
+      "id": "KR-021",
+      "knowledge": "Musa can take weekday urgent jobs again. Chidi remains first call on Sundays and holidays.",
+      "reasoning": "Musa don settle the Sallah matter and e dey show since January. Weekdays e dey sharp. Sundays and Sallah, Chidi still the one I trust because Musa family dey Ilorin that time.",
+      "topic": "warnings",
+      "peopleMentioned": ["Musa", "Chidi"],
+      "sourcePersonId": "bola",
+      "capturedAt": "2026-09-04T10:05:00.000Z",
+      "confidence": "medium"
+    }
+  ]
+}

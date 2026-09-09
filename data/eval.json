@@ -1,0 +1,58 @@
+[
+  {
+    "id": "eval-01",
+    "answer": "Do not use Musa for urgent jobs, use Chidi. Sallah weekend he disappeared with two hospital runs.",
+    "expectedTopic": "warnings",
+    "expectedPeople": ["Musa", "Chidi"],
+    "whyPhrases": ["Sallah", "hospital runs"]
+  },
+  {
+    "id": "eval-02",
+    "answer": "Start the Lister at 4:30pm before PHCN takes light. Neighbours complain after 10. If you wait until light cut, the starter battery dey weak.",
+    "expectedTopic": "generator",
+    "expectedPeople": [],
+    "whyPhrases": ["starter battery dey weak", "Neighbours complain"]
+  },
+  {
+    "id": "eval-03",
+    "answer": "Buy Boxer spares from Alhaji at Ladipo stall 14, not Computer Village. Those Taiwan copies no last.",
+    "expectedTopic": "suppliers",
+    "expectedPeople": ["Alhaji"],
+    "whyPhrases": ["Taiwan copies", "Ladipo"]
+  },
+  {
+    "id": "eval-04",
+    "answer": "For Ikoyi in the rain send them through Falomo, never Third Mainland. That bridge jam till 4.",
+    "expectedTopic": "delivery-routes",
+    "expectedPeople": [],
+    "whyPhrases": ["jam till 4", "Falomo"]
+  },
+  {
+    "id": "eval-05",
+    "answer": "Collect cash-on-delivery into the shop POS, not rider personal accounts. One time a rider forget 45k from three COD.",
+    "expectedTopic": "payments",
+    "expectedPeople": [],
+    "whyPhrases": ["forget 45k", "shop POS"]
+  },
+  {
+    "id": "eval-06",
+    "answer": "Mrs. Durojaiye wants the parcel left with Grace the housekeeper, never at the gate. Gate man lose one envelope of documents December.",
+    "expectedTopic": "customer-handling",
+    "expectedPeople": ["Durojaiye", "Grace"],
+    "whyPhrases": ["Gate man lose", "housekeeper"]
+  },
+  {
+    "id": "eval-07",
+    "answer": "Change engine oil every 1,200 km on the Boxer bikes. If you wait for 2,000 the oil go black and the bike go knock.",
+    "expectedTopic": "vehicle-maintenance",
+    "expectedPeople": [],
+    "whyPhrases": ["oil go black", "1,200"]
+  },
+  {
+    "id": "eval-08",
+    "answer": "Keys for the night locker live in the blue tin behind the kettle, not in the drawer. Drawer dey too obvious.",
+    "expectedTopic": "office",
+    "expectedPeople": [],
+    "whyPhrases": ["blue tin", "Drawer dey too obvious"]
+  }
+]
