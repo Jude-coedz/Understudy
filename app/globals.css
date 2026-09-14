@@ -1,46 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #08090a;
-  --foreground: #e8e8ea;
+  --background: #08090b;
+  --foreground: #f7f8f8;
+  --sidebar: #0b0c0e;
+  --surface-1: #0f1012;
+  --surface-2: #141518;
+  --surface-3: #191a1e;
   --accent: #5e6ad2;
+  --accent-hover: #7884ef;
   --accent-soft: rgba(94, 106, 210, 0.14);
-  --muted: #8a8f98;
-  --faint: #5c6169;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --card: #101113;
-  --card-hover: #141518;
-  --danger: #eb5757;
-  --warning: #f2c94c;
-  --ok: #4cb782;
+  --muted: #a0a5ad;
+  --subtle: #747982;
+  --faint: #565b63;
+  --border: #23252a;
+  --border-strong: #34373d;
+  --danger: #e35d6a;
+  --warning: #d5a94f;
+  --ok: #4aad75;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-sidebar: var(--sidebar);
+  --color-card: var(--surface-1);
+  --color-card-hover: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
   --color-faint: var(--faint);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --color-card: var(--card);
-  --color-card-hover: var(--card-hover);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-ok: var(--ok);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 html,
 body {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  font-size: 13px;
-  line-height: 1.45;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 * {
@@ -52,19 +61,50 @@ body {
   color: var(--foreground);
 }
 
-textarea,
-input,
 button,
+a,
+input,
+textarea,
 select {
-  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
-textarea:focus,
-input:focus,
-select:focus,
-button:focus-visible {
-  outline: 1px solid var(--accent);
-  outline-offset: 1px;
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2b2e34;
+  border: 3px solid var(--background);
+  border-radius: 999px;
+}
+
+.metric-grid {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .explain-term {
