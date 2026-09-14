@@ -4,6 +4,9 @@
   "private": true,
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 43127",
     "dev:cloudflare": "vite dev --host 127.0.0.1 --port 43127",
@@ -26,7 +29,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.9",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.0",
