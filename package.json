@@ -10,12 +10,12 @@
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 43127",
     "dev:cloudflare": "vite dev --host 127.0.0.1 --port 43127",
-    "build": "next build",
+    "build": "vite build",
+    "build:next": "next build",
     "build:cloudflare": "vite build",
     "start": "next start --hostname 127.0.0.1 --port 43127",
     "preview:cloudflare": "vite preview --host 127.0.0.1 --port 43127",
-    "deploy": "npm run build:cloudflare && wrangler deploy --config dist/server/wrangler.json",
-    "deploy:dry-run": "npm run build:cloudflare && wrangler deploy --dry-run --config dist/server/wrangler.json",
+    "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint"
   },
