@@ -1,13 +1,15 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "understudy",
-  "main": "vinext/server/app-router-entry",
+  "main": "vinext/server/fetch-handler",
   "compatibility_date": "2026-09-14",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "GEMINI_MODEL": "gemini-3.1-flash-lite"
   },
   "assets": {
-    "not_found_handling": "none"
+    "directory": "dist/client",
+    "not_found_handling": "none",
+    "binding": "ASSETS"
   }
 }
