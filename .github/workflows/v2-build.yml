@@ -3,6 +3,7 @@ name: V2 build check
 on:
   push:
     branches:
+      - main
       - v2-handoff-ui
   pull_request:
     branches:
@@ -29,3 +30,6 @@ jobs:
 
       - name: Cloudflare Workers build
         run: npm run build:cloudflare
+
+      - name: Validate generated Worker deployment
+        run: npx wrangler deploy --dry-run --config dist/server/wrangler.json
