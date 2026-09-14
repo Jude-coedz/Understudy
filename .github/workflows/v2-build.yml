@@ -6,6 +6,7 @@ on:
       - main
       - v2-handoff-ui
       - v2-functional-sources
+      - v2-guided-onboarding
   pull_request:
     branches:
       - main
