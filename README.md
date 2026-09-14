@@ -1,99 +1,66 @@
 # Understudy
 
-**Understudy helps small businesses capture the knowledge their employees carry in their heads before they leave.**
+**Understudy is an AI-powered work handoff system that reconstructs what someone worked on, finds missing context, and helps transfer ownership before that knowledge disappears.**
 
-When someone leaves a small business, they often take important knowledge with them: which customers to avoid, why a particular route doesn't work, how a process actually gets done, or what went wrong the last time someone tried something.
+Understudy is being rebuilt around a simple idea: when work changes hands, the successor should inherit more than a folder of documents. They should inherit the projects, decisions, reasoning, risks, open work, and source evidence needed to continue.
 
-Most documentation tools turn this into neat notes and checklists. Understudy takes a different approach. It keeps the **reasoning and context behind the knowledge**, including who said it, what happened, and when it was learned.
+## V2 product flow
 
-## What it does
+```text
+Create transition
+      ↓
+Collect evidence
+      ├── documents
+      ├── GitHub
+      ├── AI conversation recovery
+      └── employee input
+      ↓
+AI reconstructs work
+      ↓
+Employee confirms / corrects
+      ↓
+Understudy detects gaps
+      ↓
+Adaptive handoff interview
+      ↓
+Verified handoff
+      ↓
+Successor questions + cited answers
+```
 
-Understudy is a working product demo built around a fictional Lagos logistics company called **FastTrack Dispatch**.
+The V2 UI is built around **Transitions** rather than a generic knowledge base. Supporting capabilities include Sources, Work Map, Interview, Handover, Questions, and Continuity risk.
 
-It has four main parts:
+## AI context recovery
 
-### Knowledge
+A meaningful amount of modern work reasoning lives in tools such as ChatGPT, Claude, and Gemini rather than formal documents.
 
-A central view of everything the business has learned from its employees.
+Understudy can generate a structured recovery prompt for an employee to run inside the AI assistant they used for work. The returned context can then be imported as **AI-recovered evidence** and reviewed alongside primary documents and self-reported interview answers.
 
-Each piece of knowledge keeps its original context and source instead of reducing it to a generic statement.
+AI-recovered evidence is never treated as unquestionable truth. Understudy keeps source provenance and confidence visible.
 
-The system also highlights:
+## AI provider
 
-* Conflicting information
-* Knowledge that may be becoming outdated
-* Topics known by only one person
-* Areas where the business has very little information
+The hosted AI adapter uses the Gemini Developer API through a server-side route.
 
-### Ask
+Default model:
 
-Instead of searching through documentation, users can ask questions in natural language.
+```text
+gemini-3.1-flash-lite
+```
 
-For example:
-
-> Who shouldn't we use for urgent jobs?
-
-Understudy builds a briefing from the knowledge it has collected and shows where each piece of information came from.
-
-If two employees disagree, **both perspectives are shown**.
-
-If the business has never recorded an answer, Understudy returns a knowledge gap instead of making one up.
-
-### Coverage
-
-Coverage shows which employees hold knowledge about which parts of the business.
-
-This makes it easy to identify risks such as:
-
-* Only one person knows how a particular route works
-* Only one person understands a critical process
-* A topic has conflicting information
-* Important areas have barely been documented
-
-This helps answer a practical question:
-
-**"If someone left this week, what would we suddenly not know?"**
-
-### Capture
-
-Capture simulates an interview with an employee.
-
-The system identifies areas where more information is needed and asks targeted follow-up questions instead of running through a generic questionnaire.
-
-The employee's answer is then extracted into structured knowledge, while still preserving the original reasoning and context.
-
-If the new information conflicts with something already recorded, Understudy keeps both sides instead of silently overwriting the existing knowledge.
-
-## Demo
-
-The demo uses **FastTrack Dispatch**, a fictional Lagos logistics business.
-
-It comes with seeded data so you can explore the product immediately.
-
-Try these flows:
-
-1. Open **Knowledge** and explore the existing records.
-2. Go to **Ask** and ask:
-   `Who shouldn't we use for urgent jobs?`
-3. Notice that the system surfaces both sides of the disagreement rather than choosing one.
-4. Ask about something that has never been documented and see how the system identifies a knowledge gap.
-5. Open **Coverage** to see where knowledge is concentrated or missing.
-6. Use **Capture** to simulate an employee interview and add new knowledge.
-7. Explore the handover flow to see what information would matter if someone became unavailable.
+If `GEMINI_API_KEY` is missing or the model call fails, the existing deterministic fallback logic remains available for supported demo flows.
 
 ## Running locally
 
-### Requirements
+Requirements:
 
-* Node.js 20+
-* An Anthropic API key is optional.
+- Node.js 22+
+- A Gemini API key is optional for deterministic demo flows
 
-The main Capture, Ask, and handover flows can run using the local fallback without an API key.
-
-### Installation
+Install and run the normal Next.js development server:
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
@@ -104,29 +71,78 @@ Then open:
 http://127.0.0.1:43127
 ```
 
-## Tech stack
+To run using the Cloudflare Workers-compatible vinext development path:
 
-* Next.js 16
-* React 19
-* TypeScript
-* Tailwind CSS 4
-* Zustand
-* Anthropic API
-* Claude
+```bash
+npm run dev:cloudflare
+```
 
+## Cloudflare deployment
 
-The demo intentionally has **no authentication or database**. Data is persisted locally in the browser.
+Understudy follows the same deployment principle as Forge: the application and its server routes run on **Cloudflare Workers**, while the model API key stays server-side as an encrypted Worker secret.
 
-## Why I built it
+The repository includes:
 
-Understudy explores a simple question:
+- `vite.config.ts` — vinext + Cloudflare Vite configuration
+- `wrangler.jsonc` — Worker configuration
+- `npm run build:cloudflare` — production Workers build
+- `npm run deploy` — build and deploy with Wrangler
 
-**What if business knowledge was treated as something that needs to be actively captured, challenged, and handed over, rather than something people are expected to write down themselves?**
+### Required Cloudflare secret
 
-The goal isn't to build another company wiki.
+Add this in Cloudflare rather than committing it to GitHub:
 
-It's to make the knowledge inside people's heads easier to capture and pass on.
+```text
+GEMINI_API_KEY
+```
+
+`GEMINI_MODEL` is non-sensitive and defaults to `gemini-3.1-flash-lite` in `wrangler.jsonc`.
+
+For local Workers development, place secrets in `.dev.vars` or `.env` and do not commit those files.
+
+### Git-connected deployment
+
+Connect this GitHub repository to a Cloudflare Worker and use `main` as the production branch. Cloudflare Workers Builds can then rebuild and deploy whenever new commits land on `main`.
+
+Recommended build settings:
+
+```text
+Production branch: main
+Node version: 22+
+Build command: npm run build:cloudflare
+Deploy command: npx wrangler deploy
+```
+
+The Worker name in Cloudflare should be `understudy`, matching `wrangler.jsonc`.
+
+## Current stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Zustand
+- Gemini Developer API
+- vinext
+- Cloudflare Workers
+
+## Current V2 scope
+
+The first V2 slice establishes the product shell and transition workflow. The next implementation slice is:
+
+1. real transition domain model
+2. document ingestion
+3. Gemini structured extraction
+4. gap detection
+5. public GitHub analysis
+6. adaptive interview feedback loop
+7. grounded Ask-the-Handoff
+8. handoff export
+
+## Security note
+
+API keys are never intended to be exposed to the browser or committed to the repository. For this free portfolio build, use fictional or sanitized company material when testing third-party AI APIs.
 
 ## License
 
-
+MIT

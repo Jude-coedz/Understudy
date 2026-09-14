@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Inter } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const geist = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -13,18 +13,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Understudy — FastTrack Dispatch",
+  title: "Understudy — Work handoff intelligence",
   description:
-    "Capture operational knowledge before people leave. FastTrack Dispatch demo.",
+    "AI-powered work handoffs that reconstruct ownership, preserve context, and prepare the next person to continue the work.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full bg-background font-sans text-foreground">
+    <html lang="en" className={`${geist.variable} ${geistMono.variable} antialiased`}>
+      <body className="min-h-screen bg-background font-sans text-foreground">
         {children}
       </body>
     </html>
