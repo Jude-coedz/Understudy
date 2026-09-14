@@ -1,29 +1,41 @@
 {
   "name": "understudy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 43127",
+    "dev:cloudflare": "vite dev --host 127.0.0.1 --port 43127",
     "build": "next build",
+    "build:cloudflare": "vite build",
     "start": "next start --hostname 127.0.0.1 --port 43127",
+    "preview:cloudflare": "vite preview --host 127.0.0.1 --port 43127",
+    "deploy": "vite build && wrangler deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-server-dom-webpack": "^19.2.8",
+    "vinext": "^1.0.0-beta.9",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.54.9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-rsc": "^0.5.34",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite": "^8.2.2",
+    "wrangler": "^4.131.2"
   }
 }
