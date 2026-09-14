@@ -54,13 +54,13 @@ If `GEMINI_API_KEY` is missing or the model call fails, the existing determinist
 
 Requirements:
 
-- Node.js 20+
+- Node.js 22+
 - A Gemini API key is optional for deterministic demo flows
 
 Install and run the normal Next.js development server:
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
@@ -104,17 +104,16 @@ For local Workers development, place secrets in `.dev.vars` or `.env` and do not
 
 Connect this GitHub repository to a Cloudflare Worker and use `main` as the production branch. Cloudflare Workers Builds can then rebuild and deploy whenever new commits land on `main`.
 
-Build command:
+Recommended build settings:
 
-```bash
-npm run build:cloudflare
+```text
+Production branch: main
+Node version: 22+
+Build command: npm run build:cloudflare
+Deploy command: npx wrangler deploy
 ```
 
-Deploy command:
-
-```bash
-npx wrangler deploy
-```
+The Worker name in Cloudflare should be `understudy`, matching `wrangler.jsonc`.
 
 ## Current stack
 
