@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - v2-handoff-ui
+      - v2-functional-sources
   pull_request:
     branches:
       - main
