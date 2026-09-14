@@ -14,7 +14,8 @@
     "build:cloudflare": "vite build",
     "start": "next start --hostname 127.0.0.1 --port 43127",
     "preview:cloudflare": "vite preview --host 127.0.0.1 --port 43127",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build:cloudflare && wrangler deploy --config dist/server/wrangler.json",
+    "deploy:dry-run": "npm run build:cloudflare && wrangler deploy --dry-run --config dist/server/wrangler.json",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "eslint"
   },
