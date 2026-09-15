@@ -110,20 +110,21 @@ export async function getSupabaseSession(): Promise<SupabaseSession | null> {
   return refreshSession(session);
 }
 
-export async function getSupabaseUser(session = await getSupabaseSession()): Promise<SupabaseUser | null> {
-  if (!session) return null;
-  if (session.user?.id) return session.user;
+export async function getSupabaseUser(session?: SupabaseSession | null): Promise<SupabaseUser | null> {
+  const activeSession = session ?? (await getSupabaseSession());
+  if (!activeSession) return null;
+  if (activeSession.user?.id) return activeSession.user;
   const config = await loadSupabaseConfig();
   if (!config.configured) return null;
   const response = await fetch(`${config.url}/auth/v1/user`, {
     headers: {
       apikey: config.publishableKey,
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${activeSession.access_token}`,
     },
   });
   if (!response.ok) return null;
   const user = (await response.json()) as SupabaseUser;
-  storeSupabaseSession({ ...session, user });
+  storeSupabaseSession({ ...activeSession, user });
   return user;
 }
 
