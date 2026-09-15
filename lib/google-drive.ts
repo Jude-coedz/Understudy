@@ -10,6 +10,7 @@ type PickerFile = {
   id: string;
   name: string;
   mimeType: string;
+  resourceKey?: string;
 };
 
 export type GoogleDriveConfig = {
@@ -62,8 +63,6 @@ export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveC
       apiKey: String(payload.apiKey || ""),
     };
 
-    // Cache only a valid configuration. A transient Worker/API failure should not
-    // permanently poison the rest of the browser session.
     cachedConfig = nextConfig.configured ? nextConfig : null;
     return nextConfig;
   } catch {
@@ -72,8 +71,6 @@ export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveC
   }
 }
 
-// UI labels are optimistic. The real connection path always performs a fresh
-// runtime configuration check and surfaces an actionable error if it is missing.
 export function googleDriveConfigured() {
   if (typeof window !== "undefined" && !cachedConfig) void loadGoogleDriveConfig(true);
   return true;
@@ -84,7 +81,11 @@ export async function connectGoogleDrive(): Promise<{
   identity: UnderstudyIdentity;
 }> {
   const config = await loadGoogleDriveConfig(true);
-  if (!config.clientId) throw new Error("Google client ID is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.");
+  if (!config.clientId) {
+    throw new Error(
+      "Google client ID is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.",
+    );
+  }
 
   await loadScript(GIS_SRC);
   if (!window.google?.accounts?.oauth2) {
@@ -140,9 +141,25 @@ async function loadPicker() {
   await new Promise<void>((resolve) => window.gapi.load("picker", { callback: resolve }));
 }
 
+function projectNumberFromClientId(clientId: string) {
+  const projectNumber = clientId.split("-")[0]?.trim();
+  return /^\d+$/.test(projectNumber || "") ? projectNumber : "";
+}
+
 export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFile | null> {
   const config = await loadGoogleDriveConfig(true);
-  if (!config.apiKey) throw new Error("Google Picker API key is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.");
+  if (!config.apiKey) {
+    throw new Error(
+      "Google Picker API key is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.",
+    );
+  }
+
+  const appId = projectNumberFromClientId(config.clientId);
+  if (!appId) {
+    throw new Error(
+      "Understudy could not determine the Google Cloud project number from the OAuth client ID.",
+    );
+  }
 
   await loadPicker();
   if (!window.google?.picker) throw new Error("Google Picker did not load.");
@@ -157,6 +174,8 @@ export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFi
       .addView(view)
       .setOAuthToken(accessToken)
       .setDeveloperKey(config.apiKey)
+      .setAppId(appId)
+      .setOrigin(window.location.origin)
       .setCallback((data: any) => {
         const action = data?.[window.google.picker.Response.ACTION];
         if (action === window.google.picker.Action.CANCEL) {
@@ -173,6 +192,7 @@ export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFi
           id: String(doc[window.google.picker.Document.ID]),
           name: String(doc[window.google.picker.Document.NAME] || "Google Drive file"),
           mimeType: String(doc[window.google.picker.Document.MIME_TYPE] || ""),
+          resourceKey: typeof doc.resourceKey === "string" ? doc.resourceKey : undefined,
         });
       })
       .build();
@@ -181,13 +201,36 @@ export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFi
   });
 }
 
+async function googleErrorMessage(response: Response, fallback: string) {
+  try {
+    const payload = (await response.clone().json()) as {
+      error?: { message?: string; status?: string; code?: number };
+    };
+    const message = payload?.error?.message?.trim();
+    if (message) return `${fallback} Google returned ${response.status}: ${message}`;
+  } catch {
+    // Ignore parsing failures and fall back to status text.
+  }
+  return `${fallback} Google returned ${response.status}${response.statusText ? ` ${response.statusText}` : ""}.`;
+}
+
 export async function readGoogleDriveFile(accessToken: string, picked: PickerFile) {
-  const headers = { Authorization: `Bearer ${accessToken}` };
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+  };
+  if (picked.resourceKey) {
+    headers["X-Goog-Drive-Resource-Keys"] = `${picked.id}/${picked.resourceKey}`;
+  }
+
   const metadataResponse = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(picked.id)}?fields=id,name,mimeType,modifiedTime`,
     { headers },
   );
-  if (!metadataResponse.ok) throw new Error("Understudy could not read the selected file metadata.");
+  if (!metadataResponse.ok) {
+    throw new Error(
+      await googleErrorMessage(metadataResponse, "Understudy could not read the selected file metadata."),
+    );
+  }
   const metadata = (await metadataResponse.json()) as {
     id: string;
     name: string;
@@ -210,7 +253,11 @@ export async function readGoogleDriveFile(accessToken: string, picked: PickerFil
   }
 
   const contentResponse = await fetch(contentUrl, { headers });
-  if (!contentResponse.ok) throw new Error("Understudy could not download the selected file.");
+  if (!contentResponse.ok) {
+    throw new Error(
+      await googleErrorMessage(contentResponse, "Understudy could not download the selected file."),
+    );
+  }
   const text = await contentResponse.text();
   if (!text.trim()) throw new Error("The selected file did not contain readable text.");
 
