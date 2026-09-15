@@ -12,7 +12,9 @@ import {
   parkedInterviewGaps,
   rankedInterviewGaps,
 } from "@/lib/interview-priority";
-import { IconCheck, IconSpark } from "./icons";
+import { relatedSourcesForGap } from "@/lib/source-provenance";
+import { IconCheck, IconFile, IconSpark } from "./icons";
+import { SourcePreviewDialog } from "./source-preview-dialog";
 
 type Props = {
   workspace: PersonalWorkspace;
@@ -97,6 +99,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [showExceptions, setShowExceptions] = useState(false);
+  const [previewSourceId, setPreviewSourceId] = useState("");
 
   useEffect(() => {
     if (!focus.length) {
@@ -113,6 +116,11 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const current = focus.find((gap) => gap.question === selectedQuestion) ?? focus[0];
   const currentIndex = current ? focus.findIndex((gap) => gap.question === current.question) : -1;
   const minutes = estimatedInterviewMinutes(focus.length);
+  const references = useMemo(
+    () => current ? relatedSourcesForGap(workspace, current, 3) : [],
+    [workspace, current],
+  );
+  const previewSource = transition.sources.find((source) => source.id === previewSourceId) ?? null;
 
   function chooseDisposition(status: InterviewGapDisposition) {
     if (!current) return;
@@ -137,7 +145,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   }
 
   async function submitAnswer() {
-    if (!current || answer.trim().length < 20 || busy) return;
+    if (!current || !answer.trim() || busy) return;
     setBusy(true);
     onMessage("");
     try {
@@ -219,15 +227,37 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
             transition={reducedMotion ? { duration: 0 } : { x: { type: "spring", stiffness: 390, damping: 34 }, opacity: { duration: 0.2 } }}
             className="rounded-2xl border border-border-strong bg-card p-6 shadow-sm sm:p-7"
           >
-            <div className="flex items-center gap-2 text-xs text-subtle"><span>{current.topic}</span><span>·</span><span className={current.priority === "Critical" ? "text-warning" : ""}>{current.priority}</span></div>
+            <div className="flex items-center gap-2 text-xs text-subtle"><span>Topic: {current.topic}</span><span>·</span><span className={current.priority === "Critical" ? "text-warning" : ""}>{current.priority}</span></div>
             <h2 className="mt-4 max-w-2xl text-2xl font-medium leading-9 tracking-[-0.03em]">{current.question}</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-subtle">Answer it the way you would explain it to the person taking over. No formatting required.</p>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-subtle">Answer it the way you would explain it to the person taking over. A short answer is fine if that is all the context needed.</p>
+
+            {references.length > 0 && (
+              <div className="mt-5 rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-medium uppercase tracking-[0.08em] text-subtle">Why Understudy is asking</p>
+                <p className="mt-1 text-xs leading-5 text-faint">This question came from unresolved context in the role reconstruction. These are the evidence sources most directly related to it.</p>
+                <div className="mt-3 space-y-2">
+                  {references.map((reference) => (
+                    <div key={reference.source.id} className="rounded-lg border border-border bg-card p-3">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{reference.source.title}</p>
+                          <p className="mt-0.5 text-xs text-subtle">{reference.reason}</p>
+                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted">{reference.snippet}</p>
+                        </div>
+                        <button onClick={() => setPreviewSourceId(reference.source.id)} className="shrink-0 rounded-md border border-border px-2 py-1.5 text-xs text-muted hover:bg-background">View source</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} rows={7} autoFocus placeholder="Explain what they need to know…" className="mt-6 w-full resize-none rounded-xl border border-border bg-background p-4 text-sm leading-6 outline-none placeholder:text-faint focus:border-border-strong" />
 
             <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
-              <motion.button whileTap={reducedMotion ? undefined : { scale: 0.97 }} disabled={answer.trim().length < 20 || busy} onClick={() => void submitAnswer()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-35">{busy ? "Updating the handoff…" : "Save and continue"}<IconSpark /></motion.button>
+              <motion.button whileTap={reducedMotion ? undefined : { scale: 0.97 }} disabled={!answer.trim() || busy} onClick={() => void submitAnswer()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-35">{busy ? "Updating the handoff…" : "Save and continue"}<IconSpark /></motion.button>
             </div>
 
             <AnimatePresence initial={false}>
@@ -245,6 +275,13 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
       </AnimatePresence>
 
       {ranked.length > focus.length && <p className="mt-4 text-center text-xs leading-5 text-faint">Understudy is holding back {ranked.length - focus.length} lower-value question{ranked.length - focus.length === 1 ? "" : "s"} until this focus set is handled.</p>}
+
+      <SourcePreviewDialog
+        source={previewSource}
+        body={previewSource ? workspace.sourceBodies[previewSource.id] ?? "" : ""}
+        onClose={() => setPreviewSourceId("")}
+        title="Related evidence"
+      />
     </div>
   );
 }
