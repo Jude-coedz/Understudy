@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PolishRuntime } from "@/components/polish-runtime";
+import { MotionRoute } from "@/components/motion-route";
 import { CloudSessionBridge } from "@/components/cloud-session-bridge";
 import "./globals.css";
 import "./polish.css";
@@ -29,7 +30,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background font-sans text-foreground">
         <PolishRuntime />
         <CloudSessionBridge />
-        {children}
+        <MotionRoute>{children}</MotionRoute>
       </body>
     </html>
   );
