@@ -1,0 +1,33 @@
+name: Apply evidence source removal fix
+
+on:
+  push:
+    branches:
+      - fix-evidence-source-removal
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-evidence-source-removal
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fix-evidence-source-removal.mjs
+      - name: Commit generated fix
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/evidence-workspace.tsx
+          git commit -m "Allow removal of imported evidence sources"
+          git push origin HEAD:fix-evidence-source-removal
