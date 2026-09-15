@@ -7,6 +7,7 @@ import { getIdentity, type UnderstudyIdentity } from "@/lib/personal-workspace";
 import { CloudAccountControl } from "./cloud-account-control";
 import {
   IconAsk,
+  IconCheck,
   IconHome,
   IconPlug,
   IconSpark,
@@ -15,6 +16,7 @@ import {
 
 const PRIMARY_NAV = [
   { href: "/workspace", label: "Workspace", icon: IconHome },
+  { href: "/review", label: "Successor review", icon: IconCheck },
   { href: "/recover-ai", label: "Recover AI context", icon: IconSpark },
   { href: "/ask", label: "Ask Understudy", icon: IconAsk },
   { href: "/transitions", label: "Demo transitions", icon: IconTransition },
