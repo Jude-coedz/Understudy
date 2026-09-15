@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { getCurrentWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
 import type { WorkspaceAskContext, WorkspaceAskResponse } from "@/lib/workspace-ask";
+import { workspaceQuestionSuggestions } from "@/lib/workspace-question-suggestions";
 import { IconFile, IconSpark } from "./icons";
 
 export function AskView() {
@@ -17,15 +18,11 @@ export function AskView() {
   }, []);
 
   const sourceCount = workspace?.transition.sources.length ?? 0;
-  const samples = useMemo(() => {
-    if (!workspace) return [];
-    const firstProject = workspace.transition.projects[0]?.name;
-    return [
-      firstProject ? `What does the evidence say about ${firstProject}?` : "What work is this role responsible for?",
-      "What decisions or tradeoffs should the successor understand?",
-      "What risks or unresolved issues should the successor know about?",
-    ];
-  }, [workspace]);
+  const evidenceSourceCount = workspace?.transition.sources.filter((source) => source.kind !== "interview").length ?? 0;
+  const samples = useMemo(
+    () => workspace ? workspaceQuestionSuggestions(workspace) : [],
+    [workspace],
+  );
 
   function buildContext(current: PersonalWorkspace): WorkspaceAskContext {
     const transition = current.transition;
@@ -109,6 +106,7 @@ export function AskView() {
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-md border border-border bg-card px-2.5 py-1 text-[11px] text-subtle">{workspace.transition.role}</span>
           <span className="rounded-md border border-border bg-card px-2.5 py-1 text-[11px] text-subtle">{sourceCount} source{sourceCount === 1 ? "" : "s"} in workspace</span>
+          {workspace.roleEvidence && <span className="rounded-md border border-border bg-card px-2.5 py-1 text-[11px] text-subtle">{workspace.roleEvidence.domains.length} observed domain{workspace.roleEvidence.domains.length === 1 ? "" : "s"}</span>}
         </div>
       </div>
 
@@ -117,10 +115,16 @@ export function AskView() {
 
         {!answer && (
           <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center gap-2"><IconSpark className="text-muted" /><h2 className="text-[14px] font-medium">Try a workspace question</h2></div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2"><IconSpark className="text-muted" /><h2 className="text-[14px] font-medium">Questions generated from this workspace</h2></div>
+              {evidenceSourceCount > 0 && <span className="shrink-0 text-[11px] text-faint">Based on {evidenceSourceCount} evidence source{evidenceSourceCount === 1 ? "" : "s"}</span>}
+            </div>
+            <p className="mt-2 text-[12px] leading-5 text-subtle">
+              These suggestions come from the current domains, projects, risks, open questions, contradictions, and source titles. They change as the evidence set changes.
+            </p>
             <div className="mt-4 grid gap-2">
               {samples.map((sample) => (
-                <button key={sample} onClick={() => void send(sample)} disabled={busy || sourceCount === 0} className="rounded-lg border border-border bg-background px-3 py-3 text-left text-[13px] text-muted transition-colors hover:bg-card-hover disabled:opacity-40">
+                <button key={sample} onClick={() => void send(sample)} disabled={busy || sourceCount === 0} className="rounded-lg border border-border bg-background px-3 py-3 text-left text-[13px] leading-5 text-muted transition-colors hover:bg-card-hover disabled:opacity-40">
                   {sample}
                 </button>
               ))}
@@ -176,7 +180,7 @@ export function AskView() {
           onKeyDown={onKey}
           rows={3}
           disabled={sourceCount === 0}
-          placeholder={sourceCount ? "Ask about a decision, project, risk, owner, dependency, or anything in this handoff…" : "Add evidence to the workspace before asking a question."}
+          placeholder={sourceCount ? "Ask about a decision, project, risk, owner, dependency, contradiction, or anything in this handoff…" : "Add evidence to the workspace before asking a question."}
           className="w-full resize-none rounded-xl border border-border bg-card px-3.5 py-3 text-[14px] leading-6 outline-none placeholder:text-faint disabled:opacity-50"
         />
         <div className="mt-2 flex items-center justify-between gap-3">
