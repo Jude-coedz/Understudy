@@ -181,13 +181,14 @@ export function normalizeReconstruction(
     ownership: clamp(coverage.ownership ?? 50),
   };
 
+  // Successor review is a real product event and must not be invented by the model.
+  // Until a successor-review workflow exists, that 10% remains unearned.
   const readiness = clamp(
     metricValues.responsibilities * 0.2 +
       metricValues.activeWork * 0.2 +
       metricValues.decisions * 0.2 +
       metricValues.tacitKnowledge * 0.15 +
-      metricValues.ownership * 0.15 +
-      40 * 0.1,
+      metricValues.ownership * 0.15,
   );
 
   const confidence: SourceItem["confidence"] =
@@ -218,7 +219,7 @@ export function normalizeReconstruction(
       { label: "Decisions", value: metricValues.decisions, note: "Rationale coverage" },
       { label: "Tacit knowledge", value: metricValues.tacitKnowledge, note: input.source.kind === "ai-context" ? "AI context imported" : "Needs interview" },
       { label: "Ownership", value: metricValues.ownership, note: "Assignment confidence" },
-      { label: "Successor review", value: 40, note: `${gaps.length} questions open` },
+      { label: "Successor review", value: 0, note: "Not reviewed" },
     ],
   };
 }
