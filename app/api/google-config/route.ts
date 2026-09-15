@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 
+function runtimeEnv(name: string) {
+  return process.env[name]?.trim() || "";
+}
+
 export async function GET() {
   const clientId =
-    process.env.GOOGLE_CLIENT_ID?.trim() ||
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() ||
-    "";
+    runtimeEnv("GOOGLE_CLIENT_ID") ||
+    runtimeEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID");
   const apiKey =
-    process.env.GOOGLE_API_KEY?.trim() ||
-    process.env.NEXT_PUBLIC_GOOGLE_API_KEY?.trim() ||
-    "";
+    runtimeEnv("GOOGLE_API_KEY") ||
+    runtimeEnv("NEXT_PUBLIC_GOOGLE_API_KEY");
 
   return NextResponse.json(
     {
