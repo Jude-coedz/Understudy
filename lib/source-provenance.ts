@@ -7,6 +7,8 @@ export type SourceReference = {
   reason: string;
 };
 
+type GapWithSources = Transition["gaps"][number] & { sourceIds?: string[] };
+
 function tokens(value: string) {
   return [...new Set(
     value
@@ -52,6 +54,19 @@ export function relatedSourcesForGap(
   const queryTokens = tokens(`${gap.topic} ${gap.question}`);
   const sources = workspace.transition.sources.filter((source) => source.kind !== "interview");
   const byId = new Map(sources.map((source) => [source.id, source]));
+  const exactSourceIds = (gap as GapWithSources).sourceIds?.filter((id) => byId.has(id)) ?? [];
+
+  if (exactSourceIds.length) {
+    return exactSourceIds
+      .map((id) => byId.get(id))
+      .filter((source): source is SourceItem => Boolean(source))
+      .slice(0, limit)
+      .map((source) => ({
+        source,
+        snippet: snippetAround(workspace.sourceBodies[source.id] ?? "", queryTokens),
+        reason: "Directly cited when Understudy created this question",
+      }));
+  }
 
   const domainMatches = (workspace.roleEvidence?.domains ?? [])
     .map((domain) => ({
