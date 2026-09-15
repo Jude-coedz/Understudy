@@ -121,6 +121,8 @@ export function EvidenceWorkspace() {
   const [synthesisPhase, setSynthesisPhase] = useState(-1);
   const [message, setMessage] = useState("");
   const [googleToken, setGoogleToken] = useState("");
+  const [finishConfirmationOpen, setFinishConfirmationOpen] = useState(false);
+  const [collectionSuccess, setCollectionSuccess] = useState<{ sourceCount: number; domainCount: number; usedModel: boolean } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -226,7 +228,7 @@ export function EvidenceWorkspace() {
 
     if (!evidenceComplete) {
       setStage("sources");
-      void finishEvidenceCollection();
+      requestFinishEvidenceCollection();
       return;
     }
 
@@ -254,6 +256,16 @@ export function EvidenceWorkspace() {
           : activeInterviewGaps.length && !interviewSources.length
             ? "Review interview questions"
             : "Open handoff";
+
+  function requestFinishEvidenceCollection() {
+    if (!evidenceSources.length) {
+      setMessage("Add at least one real source before finishing evidence collection.");
+      return;
+    }
+    if (synthesisPhase >= 0) return;
+    setMessage("");
+    setFinishConfirmationOpen(true);
+  }
 
   async function analyseSource(input: { title: string; text: string; provider: string; kind?: EvidenceKind }) {
     if (!workspace || input.text.trim().length < 20) return;
@@ -291,6 +303,7 @@ export function EvidenceWorkspace() {
       if (!response.ok || !payload.result) throw new Error(payload.error || "Could not analyse this evidence.");
 
       const next = mergeEvidenceResult(workspace, payload.result, input.text);
+      setCollectionSuccess(null);
       persist(next);
       setSourceTitle("");
       setSourceText("");
@@ -401,6 +414,7 @@ export function EvidenceWorkspace() {
       status: "Needs attention",
     };
 
+    setCollectionSuccess(null);
     persist({
       ...workspace,
       updatedAt: now,
@@ -423,6 +437,8 @@ export function EvidenceWorkspace() {
   }
 
   async function finishEvidenceCollection() {
+    setFinishConfirmationOpen(false);
+    setCollectionSuccess(null);
     if (!workspace || !evidenceSources.length || synthesisPhase >= 0) {
       if (!evidenceSources.length) setMessage("Add at least one real source before finishing evidence collection.");
       return;
@@ -500,6 +516,11 @@ export function EvidenceWorkspace() {
         },
       };
       persist(next);
+      setCollectionSuccess({
+        sourceCount: synthesisSources.length,
+        domainCount: result.evidenceModel.domains.length,
+        usedModel: Boolean(payload.usedModel),
+      });
       setStage("map");
       setMessage(
         payload.usedModel
@@ -516,6 +537,7 @@ export function EvidenceWorkspace() {
 
   function reopenEvidenceCollection() {
     if (!workspace) return;
+    setCollectionSuccess(null);
     persist({
       ...workspace,
       updatedAt: new Date().toISOString(),
@@ -548,6 +570,32 @@ export function EvidenceWorkspace() {
 
   return (
     <div className="mx-auto max-w-[1320px] px-5 py-7 lg:px-8 lg:py-9">
+      {finishConfirmationOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm"
+          onMouseDown={() => setFinishConfirmationOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finish-evidence-title"
+            onMouseDown={(event) => event.stopPropagation()}
+            className="w-full max-w-lg rounded-2xl border border-border-strong bg-card p-6 shadow-2xl"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent"><IconSpark /></div>
+            <h2 id="finish-evidence-title" className="mt-4 text-xl font-semibold tracking-tight">Finish evidence collection?</h2>
+            <p className="mt-2 text-sm leading-6 text-muted">Understudy will synthesize the {evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"} you have added as the current evidence set for this handoff.</p>
+            <div className="mt-4 rounded-xl border border-border bg-background p-4">
+              <p className="text-sm font-medium">This does not mean the role is 100% documented.</p>
+              <p className="mt-1 text-xs leading-5 text-subtle">It means you are ready for Understudy to reconstruct the role from what is currently available. You can add more evidence later, which will reopen collection and rebuild the synthesis.</p>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button onClick={() => setFinishConfirmationOpen(false)} className="rounded-lg border border-border-strong px-4 py-2.5 text-sm text-muted hover:bg-card-hover">Keep adding</button>
+              <button onClick={() => void finishEvidenceCollection()} className="rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background">Finish &amp; synthesize</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-subtle">
@@ -619,12 +667,24 @@ export function EvidenceWorkspace() {
 
               {synthesisPhase >= 0 && <div className="mt-5 space-y-2 rounded-xl border border-border bg-card p-4">{SYNTHESIS_PHASES.map((phase, index) => <div key={phase} className={`flex items-center gap-2 text-sm ${index <= synthesisPhase ? "text-muted" : "text-faint"}`}><span className={`h-1.5 w-1.5 rounded-full ${index < synthesisPhase ? "bg-ok" : index === synthesisPhase ? "animate-pulse bg-accent" : "bg-surface-3"}`} />{phase}</div>)}</div>}
 
-              {evidenceSources.length > 0 && synthesisPhase < 0 && <div className="mt-5 rounded-xl border border-border-strong bg-card p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">Do you have more evidence for this role?</p><p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">You have {evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"}. They may describe one project or many unrelated months of work. Finishing collection triggers a fresh cross-source synthesis; it does not claim the role is 100% complete.</p></div><div className="flex shrink-0 flex-wrap gap-2"><button onClick={() => setShowAdd(true)} className="rounded-lg border border-border-strong px-3 py-2 text-sm text-muted hover:bg-card-hover">Add another</button><button onClick={() => void finishEvidenceCollection()} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background">That&apos;s all I have</button></div></div></div>}
+              {evidenceSources.length > 0 && synthesisPhase < 0 && <div className="mt-5 rounded-xl border border-border-strong bg-card p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">Do you have more evidence for this role?</p><p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">You have {evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"}. They may describe one project or many unrelated months of work. Finishing collection triggers a fresh cross-source synthesis; it does not claim the role is 100% complete.</p></div><div className="flex shrink-0 flex-wrap gap-2"><button onClick={() => setShowAdd(true)} className="rounded-lg border border-border-strong px-3 py-2 text-sm text-muted hover:bg-card-hover">Add another</button><button onClick={requestFinishEvidenceCollection} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background">That&apos;s all I have</button></div></div></div>}
             </section>
           )}
 
           {stage === "map" && (
             <section>
+              {collectionSuccess && evidenceComplete && (
+                <div role="status" aria-live="polite" className="mb-4 rounded-xl border border-ok/25 bg-ok/5 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-4 w-4" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">Evidence collection finished</p>
+                      <p className="mt-1 text-sm leading-6 text-muted">{collectionSuccess.sourceCount} source{collectionSuccess.sourceCount === 1 ? "" : "s"} {collectionSuccess.usedModel ? "were synthesized" : "were indexed"} into {collectionSuccess.domainCount} observed work domain{collectionSuccess.domainCount === 1 ? "" : "s"}. This is the current evidence snapshot, not a claim that the role is 100% complete.</p>
+                    </div>
+                    <button onClick={() => setCollectionSuccess(null)} className="shrink-0 rounded-md px-2 py-1 text-xs text-subtle hover:bg-ok/10">Dismiss</button>
+                  </div>
+                </div>
+              )}
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-lg font-medium">Reconstruction</h2><p className="mt-1 text-sm leading-6 text-subtle">The map below is synthesized across the whole evidence set. “Covered” means corroborated by the supplied evidence, not proof that no work is missing.</p></div>{evidenceComplete && <button onClick={reopenEvidenceCollection} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:bg-card-hover">Add more evidence</button>}</div>
               {!evidenceComplete && <div className="mb-4 rounded-xl border border-warning/25 bg-warning/5 p-4 text-sm leading-6 text-muted">This is still a source-by-source preview. Finish evidence collection to generate a role-level synthesis before the interview.</div>}
 
