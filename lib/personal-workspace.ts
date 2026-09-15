@@ -114,10 +114,11 @@ export function loadWorkspaces(ownerId = getIdentity().id): PersonalWorkspace[] 
 export function saveWorkspace(workspace: PersonalWorkspace) {
   if (!browser()) return;
   const normalized = normalizeWorkspace(workspace);
-  const workspaces = loadWorkspaces(normalized.ownerId);
+  const storageUserId = getIdentity().id;
+  const workspaces = loadWorkspaces(storageUserId);
   const next = [normalized, ...workspaces.filter((item) => item.id !== normalized.id)];
-  window.localStorage.setItem(workspaceKey(normalized.ownerId), JSON.stringify(next));
-  window.localStorage.setItem(currentKey(normalized.ownerId), normalized.id);
+  window.localStorage.setItem(workspaceKey(storageUserId), JSON.stringify(next));
+  window.localStorage.setItem(currentKey(storageUserId), normalized.id);
   window.dispatchEvent(new CustomEvent("understudy:workspace-saved", { detail: normalized }));
 }
 
