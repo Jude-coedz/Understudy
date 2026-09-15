@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
+import { extractFileText, SUPPORTED_UPLOAD_ACCEPT, SUPPORTED_UPLOAD_LABEL } from "@/lib/file-extraction";
 import {
   blankTransition,
   createWorkspace,
@@ -234,18 +235,16 @@ export function OnboardingFlowPolished() {
 
   async function readUpload(file?: File) {
     if (!file) return;
-    const allowed = [".txt", ".md", ".json", ".csv"];
-    const extension = `.${file.name.split(".").pop()?.toLowerCase()}`;
-    if (!allowed.includes(extension)) {
-      setAnalysisError("This build currently parses TXT, Markdown, JSON, CSV and Google Docs. PDF/DOCX support comes in a later source-format pass.");
-      return;
-    }
-    const text = await file.text();
-    setSourceTitle(file.name);
-    setSourceText(text.slice(0, 60_000));
-    setSourceProvider("Uploaded document");
     setAnalysisError("");
-    setErrors((current) => ({ ...current, sourceTitle: undefined, sourceText: undefined }));
+    try {
+      const text = await extractFileText(file);
+      setSourceTitle(file.name);
+      setSourceText(text);
+      setSourceProvider("Uploaded document");
+      setErrors((current) => ({ ...current, sourceTitle: undefined, sourceText: undefined }));
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : "Understudy could not read this file.");
+    }
   }
 
   async function connectAndPickDrive() {
@@ -427,7 +426,7 @@ export function OnboardingFlowPolished() {
               <div className="grid gap-4 sm:grid-cols-3">
                 {([[
                   "paste", "Paste text", "PRD, spec, notes"
-                ], ["upload", "Upload file", "TXT / MD / JSON / CSV"], ["drive", "Google Drive", googleDriveConfigured() ? "Choose a file" : "Not configured"]] as const).map(([key, label, detail]) => (
+                ], ["upload", "Upload file", SUPPORTED_UPLOAD_LABEL], ["drive", "Google Drive", googleDriveConfigured() ? "Choose a file" : "Not configured"]] as const).map(([key, label, detail]) => (
                   <button key={key} onClick={() => setMode(key)} className={`rounded-xl border p-4 text-left ${mode === key ? "border-border-strong bg-card-hover" : "border-border bg-card hover:bg-card-hover"}`}>
                     <p className="text-sm font-medium">{label}</p><p className="mt-1 text-xs text-subtle">{detail}</p>
                   </button>
@@ -450,9 +449,9 @@ export function OnboardingFlowPolished() {
                 {mode === "upload" && (
                   <div>
                     <button onClick={() => fileInput.current?.click()} className="flex min-h-56 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border-strong bg-background px-6 text-center">
-                      <IconUpload className="text-muted" /><p className="mt-4 text-sm font-medium">Choose a real work file</p><p className="mt-1 text-xs text-subtle">TXT, Markdown, JSON, or CSV</p>
+                      <IconUpload className="text-muted" /><p className="mt-4 text-sm font-medium">Choose a real work file</p><p className="mt-1 text-xs text-subtle">{SUPPORTED_UPLOAD_LABEL}</p>
                     </button>
-                    <input ref={fileInput} type="file" accept=".txt,.md,.json,.csv,text/plain,text/markdown,application/json,text/csv" className="hidden" onChange={(e) => void readUpload(e.target.files?.[0])} />
+                    <input ref={fileInput} type="file" accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(e) => void readUpload(e.target.files?.[0])} />
                     {sourceTitle && <p className="mt-3 text-sm text-muted">Selected: {sourceTitle}</p>}
                     {errors.sourceText && <p className="mt-2 text-xs text-danger">{errors.sourceText}</p>}
                   </div>
