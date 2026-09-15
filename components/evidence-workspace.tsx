@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
+import type { WholeRoleSynthesisResult } from "@/lib/role-evidence";
 import {
   getCurrentWorkspace,
   saveIdentity,
@@ -33,13 +34,19 @@ type Stage = "sources" | "map" | "interview" | "handoff";
 type SourceMode = "paste" | "upload" | "drive";
 
 const STAGES: Array<{ key: Stage; label: string; description: string }> = [
-  { key: "sources", label: "1. Evidence", description: "Build the evidence set before treating any one document as the role." },
-  { key: "map", label: "2. Reconstruction", description: "Review what the combined evidence currently supports." },
-  { key: "interview", label: "3. Interview", description: "Fill only the highest-value gaps left by the evidence." },
+  { key: "sources", label: "1. Evidence", description: "Collect the artifacts that represent the work being handed over." },
+  { key: "map", label: "2. Reconstruction", description: "See the role-level map built across the full evidence set." },
+  { key: "interview", label: "3. Interview", description: "Fill only the highest-value gaps left by the combined evidence." },
   { key: "handoff", label: "4. Handoff", description: "Prepare the transfer after critical gaps are resolved." },
 ];
 
 const ANALYSIS_PHASES = ["Reading evidence", "Mapping work", "Recovering decisions", "Finding gaps"];
+const SYNTHESIS_PHASES = [
+  "Reading the full evidence set",
+  "Consolidating duplicate work areas",
+  "Mapping source support to role domains",
+  "Finding contradictions and missing context",
+];
 
 function Bar({ value }: { value: number }) {
   return (
@@ -61,55 +68,19 @@ function mergeUnique<T>(existing: T[], incoming: T[], key: (item: T) => string, 
     .slice(0, limit);
 }
 
-function metricValue(metrics: Transition["metrics"], label: string) {
-  return metrics.find((metric) => metric.label === label)?.value ?? 0;
-}
-
-function calculateReadiness(metrics: Transition["metrics"]) {
-  return Math.round(
-    metricValue(metrics, "Responsibilities") * 0.2 +
-      metricValue(metrics, "Active work") * 0.2 +
-      metricValue(metrics, "Decisions") * 0.2 +
-      metricValue(metrics, "Tacit knowledge") * 0.15 +
-      metricValue(metrics, "Ownership") * 0.15 +
-      metricValue(metrics, "Successor review") * 0.1,
-  );
-}
-
 function mergeEvidenceResult(
   workspace: PersonalWorkspace,
   result: ReconstructionResult,
   text: string,
 ) {
   const previous = workspace.transition;
-  const projects = mergeUnique(previous.projects, result.projects, (item) => item.name);
-  const risks = mergeUnique(previous.risks, result.risks, (item) => item.title, 10);
-  const gaps = mergeUnique(previous.gaps, result.gaps, (item) => item.question, 12);
-  const priorEvidenceCount = previous.sources.filter((source) => source.kind !== "interview").length;
-
-  const metrics = result.metrics.map((metric) => {
-    if (metric.label === "Successor review") {
-      return previous.metrics.find((item) => item.label === metric.label) ?? metric;
-    }
-    const old = previous.metrics.find((item) => item.label === metric.label);
-    if (!old || priorEvidenceCount === 0) return metric;
-    return {
-      ...metric,
-      value: Math.round((old.value * priorEvidenceCount + metric.value) / (priorEvidenceCount + 1)),
-    };
-  });
-  const readiness = calculateReadiness(metrics);
-
   const transition: Transition = {
     ...previous,
     summary: result.summary,
     sources: [...previous.sources, result.source],
-    projects,
-    risks,
-    gaps,
-    metrics,
-    readiness,
-    status: readiness >= 80 ? "Ready for review" : readiness >= 55 ? "In progress" : "Needs attention",
+    projects: mergeUnique(previous.projects, result.projects, (item) => item.name),
+    risks: mergeUnique(previous.risks, result.risks, (item) => item.title, 10),
+    gaps: mergeUnique(previous.gaps, result.gaps, (item) => item.question, 12),
   };
 
   return {
@@ -120,6 +91,7 @@ function mergeEvidenceResult(
     evidenceCollectionComplete: false,
     evidenceCollectionCompletedAt: undefined,
     interviewGapStates: {},
+    roleEvidence: undefined,
   } satisfies PersonalWorkspace;
 }
 
@@ -128,6 +100,12 @@ function sourceLabel(source: SourceItem) {
   if (source.kind === "ai-context") return "AI-recovered";
   if (source.kind === "github") return "GitHub";
   return source.provider;
+}
+
+function domainBadge(status: "Covered" | "Partial" | "Thin") {
+  if (status === "Covered") return "bg-ok/10 text-ok";
+  if (status === "Partial") return "bg-warning/10 text-warning";
+  return "bg-danger/10 text-danger";
 }
 
 export function EvidenceWorkspace() {
@@ -139,6 +117,7 @@ export function EvidenceWorkspace() {
   const [sourceText, setSourceText] = useState("");
   const [sourceProvider, setSourceProvider] = useState("Pasted evidence");
   const [analysisPhase, setAnalysisPhase] = useState(-1);
+  const [synthesisPhase, setSynthesisPhase] = useState(-1);
   const [message, setMessage] = useState("");
   const [googleToken, setGoogleToken] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -148,6 +127,7 @@ export function EvidenceWorkspace() {
   }, []);
 
   const transition = workspace?.transition;
+  const roleEvidence = workspace?.roleEvidence;
   const evidenceSources = useMemo(
     () => transition?.sources.filter((source) => source.kind !== "interview") ?? [],
     [transition],
@@ -174,7 +154,11 @@ export function EvidenceWorkspace() {
     [transition, gapStates],
   );
 
-  const evidenceComplete = Boolean(workspace?.evidenceCollectionComplete && evidenceSources.length);
+  const evidenceComplete = Boolean(
+    workspace?.evidenceCollectionComplete &&
+    roleEvidence &&
+    evidenceSources.length,
+  );
   const reconstructionReviewed = evidenceComplete && unreviewed.length === 0;
   const interviewUnlocked = reconstructionReviewed;
   const handoffUnlocked = interviewUnlocked && criticalGaps.length === 0;
@@ -219,7 +203,7 @@ export function EvidenceWorkspace() {
     } else if (next === "interview") {
       setMessage(
         !evidenceComplete
-          ? "Finish evidence collection first. Understudy should not interview you while it is still missing documents you already have."
+          ? "Finish evidence collection so Understudy can synthesize the full set into a role-level evidence map first."
           : `Review the reconstruction first. ${unreviewed.length} source${unreviewed.length === 1 ? "" : "s"} still need verification.`,
       );
     } else {
@@ -264,9 +248,7 @@ export function EvidenceWorkspace() {
         usedModel?: boolean;
         error?: string;
       };
-      if (!response.ok || !payload.result) {
-        throw new Error(payload.error || "Could not analyse this evidence.");
-      }
+      if (!response.ok || !payload.result) throw new Error(payload.error || "Could not analyse this evidence.");
 
       const next = mergeEvidenceResult(workspace, payload.result, input.text);
       persist(next);
@@ -275,7 +257,7 @@ export function EvidenceWorkspace() {
       setShowAdd(false);
       const count = next.transition.sources.filter((source) => source.kind !== "interview").length;
       setMessage(
-        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} this source. You now have ${count} evidence source${count === 1 ? "" : "s"}. Add anything else you have, or explicitly finish evidence collection when this set is representative of the role.`,
+        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} this source. You now have ${count} evidence source${count === 1 ? "" : "s"}. The role-level map will be rebuilt from all sources together when you finish collection.`,
       );
       setStage("sources");
     } catch (error) {
@@ -290,7 +272,7 @@ export function EvidenceWorkspace() {
     if (!file) return;
     const extension = `.${file.name.split(".").pop()?.toLowerCase()}`;
     if (![".txt", ".md", ".json", ".csv"].includes(extension)) {
-      setMessage("This build currently parses TXT, Markdown, JSON, CSV and Google Docs. PDF/DOCX comes later.");
+      setMessage("This build currently parses TXT, Markdown, JSON, CSV and Google Docs. PDF/DOCX is in the backlog.");
       return;
     }
     setSourceTitle(file.name);
@@ -330,22 +312,96 @@ export function EvidenceWorkspace() {
     });
   }
 
-  function finishEvidenceCollection() {
-    if (!workspace || !evidenceSources.length) {
-      setMessage("Add at least one real source before finishing evidence collection.");
+  async function finishEvidenceCollection() {
+    if (!workspace || !evidenceSources.length || synthesisPhase >= 0) {
+      if (!evidenceSources.length) setMessage("Add at least one real source before finishing evidence collection.");
       return;
     }
-    const now = new Date().toISOString();
-    persist({
-      ...workspace,
-      updatedAt: now,
-      evidenceCollectionComplete: true,
-      evidenceCollectionCompletedAt: now,
-    });
-    setMessage(
-      `Evidence collection marked complete with ${evidenceSources.length} source${evidenceSources.length === 1 ? "" : "s"}. Next, review what Understudy reconstructed. You can reopen evidence collection at any time.`,
+
+    const synthesisSources = evidenceSources
+      .map((source) => ({
+        id: source.id,
+        title: source.title,
+        kind: source.kind,
+        provider: source.provider,
+        confidence: source.confidence,
+        text: workspace.sourceBodies[source.id] ?? "",
+      }))
+      .filter((source) => source.text.trim());
+
+    if (!synthesisSources.length) {
+      setMessage("Understudy could not find the stored source bodies needed for role-level synthesis.");
+      return;
+    }
+
+    setMessage("");
+    setSynthesisPhase(0);
+    const interval = window.setInterval(
+      () => setSynthesisPhase((value) => Math.min(value + 1, SYNTHESIS_PHASES.length - 1)),
+      850,
     );
-    setStage("map");
+
+    try {
+      const response = await fetch("/api/synthesize-role", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transition: {
+            person: workspace.transition.person,
+            role: workspace.transition.role,
+            department: workspace.transition.department,
+            successor: workspace.transition.successor,
+            targetDate: workspace.transition.targetDate,
+          },
+          sources: synthesisSources,
+          current: {
+            summary: workspace.transition.summary,
+            projects: workspace.transition.projects,
+            risks: workspace.transition.risks,
+            gaps: workspace.transition.gaps,
+          },
+        }),
+      });
+      const payload = (await response.json()) as {
+        result?: WholeRoleSynthesisResult;
+        usedModel?: boolean;
+        truncated?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !payload.result) throw new Error(payload.error || "Could not synthesize the evidence set.");
+
+      const now = new Date().toISOString();
+      const result = payload.result;
+      const next: PersonalWorkspace = {
+        ...workspace,
+        updatedAt: now,
+        roleEvidence: result.evidenceModel,
+        evidenceCollectionComplete: true,
+        evidenceCollectionCompletedAt: now,
+        transition: {
+          ...workspace.transition,
+          summary: result.summary,
+          projects: result.projects,
+          risks: result.risks,
+          gaps: result.gaps,
+          metrics: result.metrics,
+          readiness: result.readiness,
+          status: result.readiness >= 80 ? "Ready for review" : result.readiness >= 55 ? "In progress" : "Needs attention",
+        },
+      };
+      persist(next);
+      setStage("map");
+      setMessage(
+        payload.usedModel
+          ? `Understudy synthesized ${synthesisSources.length} sources as one role. It found ${result.evidenceModel.domains.length} observed work domain${result.evidenceModel.domains.length === 1 ? "" : "s"}. Coverage is now based on domain support and provenance, not document count.${payload.truncated ? " Very large source bodies were compacted for this synthesis pass." : ""}`
+          : "Whole-role Gemini synthesis was unavailable, so Understudy built a conservative evidence index. No role-completeness claim was made; review the map carefully.",
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Whole-role synthesis failed.");
+    } finally {
+      window.clearInterval(interval);
+      setSynthesisPhase(-1);
+    }
   }
 
   function reopenEvidenceCollection() {
@@ -358,7 +414,7 @@ export function EvidenceWorkspace() {
     });
     setStage("sources");
     setShowAdd(true);
-    setMessage("Evidence collection reopened. Later stages are paused until you finish collecting again.");
+    setMessage("Evidence collection reopened. Add anything you missed, then Understudy will resynthesize the entire role from the updated set.");
   }
 
   const handoff = useMemo(() => {
@@ -376,6 +432,10 @@ export function EvidenceWorkspace() {
     );
   }
 
+  const coveredDomains = roleEvidence?.domains.filter((domain) => domain.status === "Covered").length ?? 0;
+  const partialDomains = roleEvidence?.domains.filter((domain) => domain.status === "Partial").length ?? 0;
+  const thinDomains = roleEvidence?.domains.filter((domain) => domain.status === "Thin").length ?? 0;
+
   return (
     <div className="mx-auto max-w-[1320px] px-5 py-7 lg:px-8 lg:py-9">
       <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -390,7 +450,7 @@ export function EvidenceWorkspace() {
         <div className="w-full rounded-xl border border-border bg-card p-4 lg:w-72">
           <div className="flex items-center justify-between text-xs"><span className="text-subtle">Transfer readiness</span><span className="font-mono text-muted">{transition.readiness}%</span></div>
           <div className="mt-2"><Bar value={transition.readiness} /></div>
-          <p className="mt-2 text-xs leading-5 text-faint">Only earned product states count. Successor review remains 0 until a real review happens.</p>
+          <p className="mt-2 text-xs leading-5 text-faint">This is transfer readiness, not an evidence-completeness score. Successor review still counts only when a real review happens.</p>
         </div>
       </div>
 
@@ -422,7 +482,7 @@ export function EvidenceWorkspace() {
           {stage === "sources" && (
             <section>
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div><h2 className="text-lg font-medium">Build the evidence set</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-subtle">A PRD can explain one project. It cannot prove that it represents the whole role. Add the documents and context a successor would actually inherit.</p></div>
+                <div><h2 className="text-lg font-medium">Build the evidence set</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-subtle">Add the artifacts a successor would inherit. Understudy will not treat document count as completeness; when you finish, it synthesizes all sources together into observed role domains.</p></div>
                 <button onClick={() => setShowAdd((value) => !value)} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconUpload /> Add evidence</button>
               </div>
 
@@ -447,17 +507,26 @@ export function EvidenceWorkspace() {
                 }) : <div className="p-10 text-center"><IconFile className="mx-auto text-faint" /><p className="mt-3 text-sm font-medium">No evidence yet</p><p className="mt-1 text-xs text-subtle">Start with a real artifact. Understudy will not invent a role model without evidence.</p></div>}
               </div>
 
-              {evidenceSources.length > 0 && <div className="mt-5 rounded-xl border border-border-strong bg-card p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">Do you have more evidence for this role?</p><p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">You have {evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"}. Add roadmaps, notes, runbooks, specs, or other artifacts before asking the person to explain things the documents already know.</p></div><div className="flex shrink-0 flex-wrap gap-2"><button onClick={() => setShowAdd(true)} className="rounded-lg border border-border-strong px-3 py-2 text-sm text-muted hover:bg-card-hover">Add another</button><button onClick={finishEvidenceCollection} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background">That&apos;s all I have</button></div></div></div>}
+              {synthesisPhase >= 0 && <div className="mt-5 space-y-2 rounded-xl border border-border bg-card p-4">{SYNTHESIS_PHASES.map((phase, index) => <div key={phase} className={`flex items-center gap-2 text-sm ${index <= synthesisPhase ? "text-muted" : "text-faint"}`}><span className={`h-1.5 w-1.5 rounded-full ${index < synthesisPhase ? "bg-ok" : index === synthesisPhase ? "animate-pulse bg-accent" : "bg-surface-3"}`} />{phase}</div>)}</div>}
+
+              {evidenceSources.length > 0 && synthesisPhase < 0 && <div className="mt-5 rounded-xl border border-border-strong bg-card p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">Do you have more evidence for this role?</p><p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">You have {evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"}. They may describe one project or many unrelated months of work. Finishing collection triggers a fresh cross-source synthesis; it does not claim the role is 100% complete.</p></div><div className="flex shrink-0 flex-wrap gap-2"><button onClick={() => setShowAdd(true)} className="rounded-lg border border-border-strong px-3 py-2 text-sm text-muted hover:bg-card-hover">Add another</button><button onClick={() => void finishEvidenceCollection()} className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background">That&apos;s all I have</button></div></div></div>}
             </section>
           )}
 
           {stage === "map" && (
             <section>
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-lg font-medium">Reconstruction</h2><p className="mt-1 text-sm leading-6 text-subtle">Review what the evidence supports. This is still a working model, not generated truth.</p></div>{evidenceComplete && <button onClick={reopenEvidenceCollection} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:bg-card-hover">Add more evidence</button>}</div>
-              {!evidenceComplete && <div className="mb-4 rounded-xl border border-warning/25 bg-warning/5 p-4 text-sm leading-6 text-muted">You are previewing an incomplete reconstruction. Return to Evidence and choose <strong className="text-foreground">That&apos;s all I have</strong> when the current source set is representative of the role.</div>}
-              <div className="space-y-5">
-                <div className="overflow-hidden rounded-xl border border-border bg-card">{transition.projects.length ? transition.projects.map((project, index) => <div key={project.name} className={`${index ? "border-t border-border" : ""} p-4`}><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">{project.name}</p><p className="mt-1 text-xs text-subtle">{project.state} · {project.ownership}</p></div><span className="font-mono text-xs text-muted">{project.evidence}% evidence</span></div><div className="mt-3"><Bar value={project.evidence} /></div></div>) : <div className="p-8 text-center text-sm text-subtle">No work areas reconstructed yet.</div>}</div>
-                <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2"><IconAlert className="text-warning" /><h3 className="text-sm font-medium">Continuity risks</h3></div><div className="mt-3 space-y-3">{transition.risks.length ? transition.risks.map((risk) => <div key={risk.title}><p className="text-sm font-medium text-muted">{risk.title}</p><p className="mt-1 text-xs leading-5 text-subtle">{risk.detail}</p></div>) : <p className="text-xs text-subtle">No risks identified yet.</p>}</div></div><div className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2"><IconSpark className="text-muted" /><h3 className="text-sm font-medium">What the evidence cannot answer</h3></div><div className="mt-3 space-y-3">{handoffOpenGaps.length ? handoffOpenGaps.map((gap) => <div key={gap.question}><p className="text-xs text-subtle">{gap.topic} · {gap.priority}</p><p className="mt-1 text-sm leading-5 text-muted">{gap.question}</p></div>) : <p className="text-xs text-subtle">No open questions from the current evidence.</p>}</div></div></div>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-lg font-medium">Reconstruction</h2><p className="mt-1 text-sm leading-6 text-subtle">The map below is synthesized across the whole evidence set. “Covered” means corroborated by the supplied evidence, not proof that no work is missing.</p></div>{evidenceComplete && <button onClick={reopenEvidenceCollection} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:bg-card-hover">Add more evidence</button>}</div>
+              {!evidenceComplete && <div className="mb-4 rounded-xl border border-warning/25 bg-warning/5 p-4 text-sm leading-6 text-muted">This is still a source-by-source preview. Finish evidence collection to generate a role-level synthesis before the interview.</div>}
+
+              {roleEvidence && <div className="space-y-5">
+                <div className="rounded-xl border border-border bg-card p-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-sm font-medium">Observed role domains</p><p className="mt-1 max-w-3xl text-sm leading-6 text-subtle">{roleEvidence.overview}</p></div><span className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-xs text-subtle">{roleEvidence.domains.length} domains · {roleEvidence.sourceCount} sources</span></div><div className="mt-4 overflow-hidden rounded-lg border border-border">{roleEvidence.domains.length ? roleEvidence.domains.map((domain, index) => <div key={domain.id} className={`${index ? "border-t border-border" : ""} p-4`}><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{domain.name}</p><span className={`rounded px-1.5 py-0.5 text-[11px] ${domainBadge(domain.status)}`}>{domain.status}</span><span className="text-xs text-faint">{domain.type}</span></div><p className="mt-1 text-sm leading-6 text-subtle">{domain.description}</p></div><span className="text-xs text-subtle">{domain.sourceIds.length} supporting source{domain.sourceIds.length === 1 ? "" : "s"}</span></div>{domain.missing.length > 0 && <div className="mt-3 rounded-lg bg-background px-3 py-2"><p className="text-xs font-medium text-muted">Still missing here</p><p className="mt-1 text-xs leading-5 text-subtle">{domain.missing.join(" · ")}</p></div>}</div>) : <div className="p-6 text-sm text-subtle">No stable role domains could be established from the current evidence.</div>}</div></div>
+
+                {(roleEvidence.missingAreas.length > 0 || roleEvidence.contradictions.length > 0) && <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border border-border bg-card p-4"><h3 className="text-sm font-medium">Likely missing areas</h3><p className="mt-1 text-xs leading-5 text-faint">These are hypotheses, not claims that the work definitely existed.</p><div className="mt-3 space-y-2">{roleEvidence.missingAreas.length ? roleEvidence.missingAreas.map((area) => <p key={area} className="text-sm leading-5 text-subtle">• {area}</p>) : <p className="text-sm text-subtle">No additional area was suggested.</p>}</div></div><div className="rounded-xl border border-border bg-card p-4"><h3 className="text-sm font-medium">Cross-source contradictions</h3><div className="mt-3 space-y-2">{roleEvidence.contradictions.length ? roleEvidence.contradictions.map((item) => <p key={item.claim} className="text-sm leading-5 text-subtle">• {item.claim} <span className="text-faint">({item.sourceIds.length} sources)</span></p>) : <p className="text-sm text-subtle">No material contradiction was detected.</p>}</div></div></div>}
+              </div>}
+
+              <div className="mt-5 space-y-5">
+                <div className="overflow-hidden rounded-xl border border-border bg-card">{transition.projects.length ? transition.projects.map((project, index) => <div key={project.name} className={`${index ? "border-t border-border" : ""} p-4`}><p className="text-sm font-medium">{project.name}</p><p className="mt-1 text-xs text-subtle">{project.state} · {project.ownership}</p></div>) : <div className="p-8 text-center text-sm text-subtle">No active work confidently reconstructed yet.</div>}</div>
+                <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2"><IconAlert className="text-warning" /><h3 className="text-sm font-medium">Continuity risks</h3></div><div className="mt-3 space-y-3">{transition.risks.length ? transition.risks.map((risk) => <div key={risk.title}><p className="text-sm font-medium text-muted">{risk.title}</p><p className="mt-1 text-xs leading-5 text-subtle">{risk.detail}</p></div>) : <p className="text-xs text-subtle">No risks identified yet.</p>}</div></div><div className="rounded-xl border border-border bg-card p-4"><div className="flex items-center gap-2"><IconSpark className="text-muted" /><h3 className="text-sm font-medium">What the full evidence set cannot answer</h3></div><div className="mt-3 space-y-3">{handoffOpenGaps.length ? handoffOpenGaps.map((gap) => <div key={gap.question}><p className="text-xs text-subtle">{gap.topic} · {gap.priority}</p><p className="mt-1 text-sm leading-5 text-muted">{gap.question}</p></div>) : <p className="text-xs text-subtle">No open questions from the current evidence.</p>}</div></div></div>
                 {evidenceComplete && unreviewed.length > 0 && <div className="rounded-xl border border-border bg-card p-4"><p className="text-sm font-medium">Verify the source interpretations</p><p className="mt-1 text-xs leading-5 text-subtle">{unreviewed.length} source{unreviewed.length === 1 ? "" : "s"} still need review before Understudy starts asking interview questions.</p><div className="mt-3 flex flex-wrap gap-2">{unreviewed.map((source) => <button key={source.id} onClick={() => verifySource(source)} className="rounded-lg border border-border-strong px-3 py-2 text-xs text-muted hover:bg-card-hover">Verify {source.title}</button>)}</div></div>}
                 {reconstructionReviewed && <button onClick={() => requestStage("interview")} className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">Continue to missing context <IconChevronRight /></button>}
               </div>
@@ -477,9 +546,9 @@ export function EvidenceWorkspace() {
                 {!evidenceSources.length
                   ? "Add the first real artifact for this role."
                   : !evidenceComplete
-                    ? `You have ${evidenceSources.length} source${evidenceSources.length === 1 ? "" : "s"}. Add anything else you have, then explicitly finish evidence collection.`
+                    ? `You have ${evidenceSources.length} source${evidenceSources.length === 1 ? "" : "s"}. Add anything else you have, then finish collection to synthesize them as one role.`
                     : unreviewed.length
-                      ? `Evidence collection is complete. Review ${unreviewed.length} source${unreviewed.length === 1 ? "" : "s"} before the interview.`
+                      ? `Role synthesis is ready. Review ${unreviewed.length} source${unreviewed.length === 1 ? "" : "s"} before the interview.`
                       : criticalGaps.length
                         ? `${criticalGaps.length} critical knowledge item${criticalGaps.length === 1 ? " remains" : "s remain"}. Work through the short interview focus set or assign the items for follow-up.`
                         : activeInterviewGaps.length && !interviewSources.length
@@ -492,10 +561,10 @@ export function EvidenceWorkspace() {
 
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center justify-between"><p className="text-sm font-medium">Evidence set</p><span className="text-xs text-subtle">{evidenceSources.length} source{evidenceSources.length === 1 ? "" : "s"}</span></div>
-              <div className="mt-3 space-y-2 text-xs text-subtle"><div className="flex justify-between"><span>Collection</span><span>{evidenceComplete ? "Finished" : "Open"}</span></div><div className="flex justify-between"><span>Reviewed</span><span>{evidenceSources.length - unreviewed.length}/{evidenceSources.length}</span></div><div className="flex justify-between"><span>Critical gaps</span><span>{criticalGaps.length}</span></div><div className="flex justify-between"><span>Interview evidence</span><span>{interviewSources.length}</span></div></div>
+              <div className="mt-3 space-y-2 text-xs text-subtle"><div className="flex justify-between"><span>Collection</span><span>{evidenceComplete ? "Synthesized" : "Open"}</span></div><div className="flex justify-between"><span>Reviewed</span><span>{evidenceSources.length - unreviewed.length}/{evidenceSources.length}</span></div><div className="flex justify-between"><span>Observed domains</span><span>{roleEvidence?.domains.length ?? "—"}</span></div><div className="flex justify-between"><span>Critical gaps</span><span>{criticalGaps.length}</span></div></div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-4"><p className="text-sm font-medium">Coverage</p><div className="mt-4 space-y-3">{transition.metrics.map((metric) => <div key={metric.label}><div className="mb-1 flex items-center justify-between text-xs"><span className="text-subtle">{metric.label}</span><span className="font-mono text-muted">{metric.value}%</span></div><Bar value={metric.value} /></div>)}</div></div>
+            <div className="rounded-xl border border-border bg-card p-4"><div className="flex items-center justify-between"><p className="text-sm font-medium">Role evidence map</p><span className="text-xs text-subtle">not completeness</span></div>{roleEvidence ? <><div className="mt-4 space-y-2 text-xs"><div className="flex justify-between"><span className="text-subtle">Covered</span><span className="font-medium text-ok">{coveredDomains}</span></div><div className="flex justify-between"><span className="text-subtle">Partial</span><span className="font-medium text-warning">{partialDomains}</span></div><div className="flex justify-between"><span className="text-subtle">Thin</span><span className="font-medium text-danger">{thinDomains}</span></div><div className="flex justify-between"><span className="text-subtle">Likely missing areas</span><span className="font-medium text-muted">{roleEvidence.missingAreas.length}</span></div></div><p className="mt-3 text-xs leading-5 text-faint">These statuses describe support for observed work domains. Understudy does not claim that an unseen part of the role cannot exist.</p></> : <p className="mt-3 text-xs leading-5 text-subtle">Finish evidence collection to build the cross-source role map.</p>}</div>
           </div>
         </aside>
       </div>

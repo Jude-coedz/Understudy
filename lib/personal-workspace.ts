@@ -1,4 +1,5 @@
 import type { Transition } from "@/data/v2-demo";
+import type { RoleEvidenceModel } from "@/lib/role-evidence";
 
 export type UnderstudyIdentity = {
   id: string;
@@ -30,6 +31,7 @@ export type PersonalWorkspace = {
   evidenceCollectionComplete: boolean;
   evidenceCollectionCompletedAt?: string;
   interviewGapStates: Record<string, InterviewGapState>;
+  roleEvidence?: RoleEvidenceModel;
 };
 
 const IDENTITY_KEY = "understudy:identity:v1";
@@ -88,6 +90,7 @@ function normalizeWorkspace(workspace: PersonalWorkspace): PersonalWorkspace {
     reviewedSourceIds: workspace.reviewedSourceIds ?? [],
     evidenceCollectionComplete: Boolean(workspace.evidenceCollectionComplete),
     interviewGapStates: workspace.interviewGapStates ?? {},
+    roleEvidence: workspace.roleEvidence,
   };
 }
 
