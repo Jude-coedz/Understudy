@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PolishRuntime } from "@/components/polish-runtime";
 import "./globals.css";
+import "./polish.css";
 
 const geist = Geist({
   variable: "--font-geist-sans",
