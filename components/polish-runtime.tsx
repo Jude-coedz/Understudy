@@ -217,9 +217,20 @@ export function PolishRuntime() {
 
   useEffect(() => {
     if (reducedMotion) return;
+
+    const qualifiesForMotion = (element: HTMLElement) => {
+      const classes = typeof element.className === "string" ? element.className : "";
+      return (
+        element.tagName === "SECTION" ||
+        classes.includes("rounded-xl") ||
+        classes.includes("sm:grid-cols-[40px") ||
+        classes.includes("Focus set")
+      );
+    };
+
     const animate = (element: Element) => {
       if (!(element instanceof HTMLElement) || element.dataset.polishCard === "true") return;
-      if (!element.matches("[class*='rounded-xl'][class*='border']")) return;
+      if (!qualifiesForMotion(element)) return;
       element.dataset.polishCard = "true";
       element.animate(
         [
@@ -230,13 +241,13 @@ export function PolishRuntime() {
       );
     };
 
-    document.querySelectorAll("[class*='rounded-xl'][class*='border']").forEach(animate);
+    document.querySelectorAll("section, [class*='rounded-xl'][class*='border']").forEach(animate);
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
           if (!(node instanceof Element)) return;
           animate(node);
-          node.querySelectorAll("[class*='rounded-xl'][class*='border']").forEach(animate);
+          node.querySelectorAll("section, [class*='rounded-xl'][class*='border']").forEach(animate);
         });
       }
     });
