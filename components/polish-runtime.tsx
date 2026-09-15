@@ -1,7 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { animate } from "motion";
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 type DatePickerState = {
@@ -96,12 +97,15 @@ function CalendarPopover({
       : Math.max(12, picker.rect.top - estimatedHeight - 8);
 
   return createPortal(
-    <div
+    <motion.div
       className="understudy-calendar fixed z-[100]"
       role="dialog"
       aria-modal="false"
       aria-label="Choose handoff date"
       style={{ top, left, width }}
+      initial={{ opacity: 0, y: -6, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: "spring", stiffness: 430, damping: 34, mass: 0.7 }}
     >
       <div className="understudy-calendar-header">
         <div>
@@ -134,7 +138,7 @@ function CalendarPopover({
         ))}
         {cells.map((date, index) =>
           date ? (
-            <button
+            <motion.button
               type="button"
               key={date.toISOString()}
               className="understudy-calendar-day disabled:cursor-not-allowed disabled:opacity-25"
@@ -147,10 +151,13 @@ function CalendarPopover({
                 day: "numeric",
                 year: "numeric",
               })}
+              whileHover={{ scale: 1.06 }}
+              whileTap={{ scale: 0.94 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
               onClick={() => onSelect(date)}
             >
               {date.getDate()}
-            </button>
+            </motion.button>
           ) : (
             <span key={`empty-${index}`} />
           ),
@@ -187,33 +194,14 @@ function CalendarPopover({
           </button>
         )}
       </div>
-    </div>,
+    </motion.div>,
     document.body,
   );
 }
 
 export function PolishRuntime() {
-  const pathname = usePathname();
   const [picker, setPicker] = useState<DatePickerState | null>(null);
-  const reducedMotion = useMemo(
-    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    [],
-  );
-
-  useEffect(() => {
-    if (reducedMotion) return;
-    const frame = window.requestAnimationFrame(() => {
-      const main = document.querySelector("main");
-      main?.animate(
-        [
-          { opacity: 0.72, transform: "translateY(5px)" },
-          { opacity: 1, transform: "translateY(0)" },
-        ],
-        { duration: 320, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
-      );
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [pathname, reducedMotion]);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -224,35 +212,61 @@ export function PolishRuntime() {
         element.tagName === "SECTION" ||
         classes.includes("rounded-xl") ||
         classes.includes("sm:grid-cols-[40px") ||
-        classes.includes("Focus set")
+        element.getAttribute("role") === "status" ||
+        element.getAttribute("role") === "dialog"
       );
     };
 
-    const animate = (element: Element) => {
-      if (!(element instanceof HTMLElement) || element.dataset.polishCard === "true") return;
+    const animateSurface = (element: Element) => {
+      if (!(element instanceof HTMLElement) || element.dataset.motionSurface === "true") return;
       if (!qualifiesForMotion(element)) return;
-      element.dataset.polishCard = "true";
-      element.animate(
-        [
-          { opacity: 0, transform: "translateY(7px) scale(0.996)" },
-          { opacity: 1, transform: "translateY(0) scale(1)" },
-        ],
-        { duration: 330, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+      element.dataset.motionSurface = "true";
+      animate(
+        element,
+        {
+          opacity: [0, 1],
+          transform: ["translateY(9px) scale(0.995)", "translateY(0px) scale(1)"],
+        },
+        { duration: 0.34, ease: "easeOut" },
       );
     };
 
-    document.querySelectorAll("section, [class*='rounded-xl'][class*='border']").forEach(animate);
+    document.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
           if (!(node instanceof Element)) return;
-          animate(node);
-          node.querySelectorAll("section, [class*='rounded-xl'][class*='border']").forEach(animate);
+          animateSurface(node);
+          node.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
         });
       }
     });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    if (reducedMotion) return;
+
+    const press = (event: PointerEvent) => {
+      const button = (event.target as Element | null)?.closest("button");
+      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+      animate(button, { scale: 0.985 }, { duration: 0.08, ease: "easeOut" });
+    };
+    const release = (event: PointerEvent) => {
+      const button = (event.target as Element | null)?.closest("button");
+      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+      animate(button, { scale: 1 }, { type: "spring", stiffness: 520, damping: 32 });
+    };
+
+    document.addEventListener("pointerdown", press, true);
+    document.addEventListener("pointerup", release, true);
+    document.addEventListener("pointercancel", release, true);
+    return () => {
+      document.removeEventListener("pointerdown", press, true);
+      document.removeEventListener("pointerup", release, true);
+      document.removeEventListener("pointercancel", release, true);
+    };
   }, [reducedMotion]);
 
   useEffect(() => {
