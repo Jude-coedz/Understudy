@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { hydrateAuthenticatedWorkspaces } from "@/lib/cloud-workspaces";
+import { consumePostAuthReturn } from "@/lib/collaboration";
 import { completeSupabaseOAuthFromHash } from "@/lib/supabase-browser";
 
 export default function AuthCallbackPage() {
@@ -16,8 +17,9 @@ export default function AuthCallbackPage() {
         setMessage("Account connected. Syncing your workspaces…");
         await hydrateAuthenticatedWorkspaces();
         if (!active) return;
+        const returnTo = consumePostAuthReturn();
         window.history.replaceState({}, "", "/auth/callback");
-        window.location.replace("/workspace");
+        window.location.replace(returnTo?.startsWith("/") ? returnTo : "/workspace");
       } catch (error) {
         if (!active) return;
         setMessage(error instanceof Error ? error.message : "Could not finish account sign-in.");
