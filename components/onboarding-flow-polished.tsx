@@ -40,6 +40,13 @@ type FieldName = "person" | "role" | "department" | "successor" | "targetDate" |
 
 type Errors = Partial<Record<FieldName, string>>;
 
+type PendingEvidence = {
+  id: string;
+  title: string;
+  text: string;
+  provider: string;
+};
+
 const ANALYSIS_PHASES = [
   "Reading the source",
   "Mapping responsibilities and active work",
@@ -47,6 +54,16 @@ const ANALYSIS_PHASES = [
   "Finding continuity risks",
   "Turning unknowns into interview questions",
 ];
+
+function mergeUnique<T>(items: T[], key: (item: T) => string, limit = 24) {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const value = key(item).trim().toLowerCase();
+    if (!value || seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  }).slice(0, limit);
+}
 
 function Field({
   label,
@@ -142,6 +159,7 @@ export function OnboardingFlowPolished() {
   const [sourceTitle, setSourceTitle] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceProvider, setSourceProvider] = useState("Pasted evidence");
+  const [uploadArtifacts, setUploadArtifacts] = useState<PendingEvidence[]>([]);
   const [analysisPhase, setAnalysisPhase] = useState(-1);
   const [analysisError, setAnalysisError] = useState("");
   const [usedModel, setUsedModel] = useState(false);
@@ -166,7 +184,7 @@ export function OnboardingFlowPolished() {
   }, []);
 
   const hasRoleDraft = Boolean(person || role || department || successor || targetDate || transitionType !== "Role transition");
-  const hasEvidenceDraft = Boolean(sourceTitle || sourceText);
+  const hasEvidenceDraft = Boolean(sourceTitle || sourceText || uploadArtifacts.length);
   const hasUnsavedDraft = !workspace && ((step === "role" && hasRoleDraft) || (step === "evidence" && (hasRoleDraft || hasEvidenceDraft)));
 
   useEffect(() => {
@@ -210,13 +228,21 @@ export function OnboardingFlowPolished() {
 
   function validateEvidence() {
     const next: Errors = {};
-    if (!sourceTitle.trim()) next.sourceTitle = "Give this source a title so it can be cited later.";
-    if (sourceText.trim().length < 40) next.sourceText = sourceText.trim().length ? "This source is too short to reconstruct reliably. Add at least a few complete sentences." : "Add or select a real work artifact before reconstruction.";
-    setErrors((current) => ({ ...current, ...next }));
+    if (mode === "upload") {
+      if (!uploadArtifacts.length) next.sourceText = "Choose at least one work file before reconstruction.";
+    } else {
+      if (!sourceTitle.trim()) next.sourceTitle = "Give this source a title so it can be cited later.";
+      if (sourceText.trim().length < 40) next.sourceText = sourceText.trim().length
+        ? "This source is too short to reconstruct reliably. Add at least a few complete sentences."
+        : "Add or select a real work artifact before reconstruction.";
+    }
+    setErrors((current) => ({ ...current, sourceTitle: undefined, sourceText: undefined, ...next }));
     const first = (["sourceTitle", "sourceText"] as FieldName[]).find((name) => next[name]);
     if (first) {
       refs[first as keyof typeof refs]?.current?.focus();
-      setNotice("Understudy needs a usable source before it can reconstruct the work.");
+      setNotice(mode === "upload"
+        ? "Choose one or more usable files before Understudy reconstructs the work."
+        : "Understudy needs a usable source before it can reconstruct the work.");
       return false;
     }
     setNotice("");
@@ -233,18 +259,47 @@ export function OnboardingFlowPolished() {
     if (!hasUnsavedDraft || window.confirm("You have unfinished setup changes. Leave this step and discard them?")) action();
   }
 
-  async function readUpload(file?: File) {
-    if (!file) return;
+  async function readUploads(files?: FileList | File[]) {
+    const picked = files ? Array.from(files) : [];
+    if (!picked.length) return;
     setAnalysisError("");
-    try {
-      const text = await extractFileText(file);
-      setSourceTitle(file.name);
-      setSourceText(text);
+
+    const accepted: PendingEvidence[] = [];
+    const failed: string[] = [];
+    for (const file of picked) {
+      try {
+        const text = await extractFileText(file);
+        accepted.push({
+          id: `${file.name}:${file.size}:${file.lastModified}`,
+          title: file.name,
+          text,
+          provider: "Uploaded document",
+        });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "could not be read";
+        failed.push(`${file.name}: ${reason}`);
+      }
+    }
+
+    if (accepted.length) {
+      setUploadArtifacts((current) => {
+        const existingIds = new Set(current.map((artifact) => artifact.id));
+        return [...current, ...accepted.filter((artifact) => !existingIds.has(artifact.id))];
+      });
       setSourceProvider("Uploaded document");
       setErrors((current) => ({ ...current, sourceTitle: undefined, sourceText: undefined }));
-    } catch (error) {
-      setAnalysisError(error instanceof Error ? error.message : "Understudy could not read this file.");
+      setNotice("");
     }
+    if (failed.length) {
+      setAnalysisError(`${failed.length} file${failed.length === 1 ? "" : "s"} could not be added. ${failed.join(" | ")}`);
+    }
+    if (fileInput.current) fileInput.current.value = "";
+  }
+
+  function removeQueuedUpload(id: string) {
+    setUploadArtifacts((current) => current.filter((artifact) => artifact.id !== id));
+    setAnalysisError("");
+    if (fileInput.current) fileInput.current.value = "";
   }
 
   async function connectAndPickDrive() {
@@ -290,51 +345,74 @@ export function OnboardingFlowPolished() {
         targetDate: formattedDate,
         type: transitionType,
       });
-      const response = await fetch("/api/reconstruct", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transition: {
-            person: transition.person,
-            role: transition.role,
-            department: transition.department,
-            successor: transition.successor,
-            targetDate: transition.targetDate,
-          },
-          source: {
-            title: sourceTitle.trim(),
-            kind: "document",
-            provider: sourceProvider,
-            text: sourceText.trim(),
-          },
-        }),
-      });
-      const payload = (await response.json()) as { result?: ReconstructionResult; usedModel?: boolean; error?: string };
-      if (!response.ok || !payload.result) throw new Error(payload.error || "Understudy could not analyse this source.");
+      const pending: PendingEvidence[] = mode === "upload"
+        ? uploadArtifacts
+        : [{ id: "single-source", title: sourceTitle.trim(), text: sourceText.trim(), provider: sourceProvider }];
 
-      const result = payload.result;
+      const results: Array<{ result: ReconstructionResult; usedModel: boolean; evidence: PendingEvidence }> = [];
+      for (const evidence of pending) {
+        const response = await fetch("/api/reconstruct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transition: {
+              person: transition.person,
+              role: transition.role,
+              department: transition.department,
+              successor: transition.successor,
+              targetDate: transition.targetDate,
+            },
+            source: {
+              title: evidence.title,
+              kind: "document",
+              provider: evidence.provider,
+              text: evidence.text,
+            },
+          }),
+        });
+        const payload = (await response.json()) as { result?: ReconstructionResult; usedModel?: boolean; error?: string };
+        if (!response.ok || !payload.result) throw new Error(payload.error || `Understudy could not analyse ${evidence.title}.`);
+        results.push({ result: payload.result, usedModel: Boolean(payload.usedModel), evidence });
+      }
+
+      const first = results[0]?.result;
+      if (!first) throw new Error("Understudy did not receive any usable evidence.");
+      const multiple = results.length > 1;
+      const combinedSources = results.map((item) => item.result.source);
+      const combinedProjects = mergeUnique(results.flatMap((item) => item.result.projects), (item) => item.name);
+      const combinedRisks = mergeUnique(results.flatMap((item) => item.result.risks), (item) => item.title, 16);
+      const combinedGaps = mergeUnique(results.flatMap((item) => item.result.gaps), (item) => item.question, 20);
+      const readiness = multiple ? transition.readiness : first.readiness;
       const nextTransition = {
         ...transition,
-        summary: result.summary,
-        readiness: result.readiness,
-        metrics: result.metrics,
-        sources: [result.source],
-        projects: result.projects,
-        risks: result.risks,
-        gaps: result.gaps,
-        status: result.readiness >= 80 ? ("Ready for review" as const) : result.readiness >= 55 ? ("In progress" as const) : ("Needs attention" as const),
+        summary: multiple
+          ? `Initial reconstruction from ${results.length} separate evidence sources. Add anything else you have in the workspace, then finish evidence collection to run the whole-role synthesis.`
+          : first.summary,
+        readiness,
+        metrics: multiple ? transition.metrics : first.metrics,
+        sources: combinedSources,
+        projects: combinedProjects,
+        risks: combinedRisks,
+        gaps: combinedGaps,
+        status: multiple
+          ? ("Needs attention" as const)
+          : readiness >= 80
+            ? ("Ready for review" as const)
+            : readiness >= 55
+              ? ("In progress" as const)
+              : ("Needs attention" as const),
       };
       const nextWorkspace = createWorkspace(nextTransition);
-      nextWorkspace.sourceBodies[result.source.id] = sourceText.trim();
+      for (const item of results) nextWorkspace.sourceBodies[item.result.source.id] = item.evidence.text;
       saveWorkspace(nextWorkspace);
       setWorkspace(nextWorkspace);
       setExisting(nextWorkspace);
-      setUsedModel(Boolean(payload.usedModel));
+      setUsedModel(results.every((item) => item.usedModel));
       setErrors({});
       setNotice("");
       setStep("review");
     } catch (error) {
-      setAnalysisError(error instanceof Error ? error.message : "Something went wrong while analysing the source.");
+      setAnalysisError(error instanceof Error ? error.message : "Something went wrong while analysing the evidence.");
     } finally {
       window.clearInterval(interval);
       setAnalysisPhase(-1);
@@ -419,8 +497,8 @@ export function OnboardingFlowPolished() {
             <section>
               <div className="mb-6">
                 <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Step 2</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Add the first real artifact.</h1>
-                <p className="mt-2 text-sm leading-6 text-muted">This is the first source, not the whole handoff. After analysis, the workspace will explicitly ask whether you have more evidence.</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Add real work artifacts.</h1>
+                <p className="mt-2 text-sm leading-6 text-muted">Start with one file or select several at once. Each artifact stays separate and traceable; you can add more evidence later before finishing collection.</p>
               </div>
               {notice && <div aria-live="polite" className="mb-4 rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-muted">{notice}</div>}
               <div className="grid gap-4 sm:grid-cols-3">
@@ -449,10 +527,26 @@ export function OnboardingFlowPolished() {
                 {mode === "upload" && (
                   <div>
                     <button onClick={() => fileInput.current?.click()} className="flex min-h-56 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border-strong bg-background px-6 text-center">
-                      <IconUpload className="text-muted" /><p className="mt-4 text-sm font-medium">Choose a real work file</p><p className="mt-1 text-xs text-subtle">{SUPPORTED_UPLOAD_LABEL}</p>
+                      <IconUpload className="text-muted" /><p className="mt-4 text-sm font-medium">Choose one or more work files</p><p className="mt-1 text-xs text-subtle">Select several files in one pick, or come back and add another batch. {SUPPORTED_UPLOAD_LABEL}</p>
                     </button>
-                    <input ref={fileInput} type="file" accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(e) => void readUpload(e.target.files?.[0])} />
-                    {sourceTitle && <p className="mt-3 text-sm text-muted">Selected: {sourceTitle}</p>}
+                    <input ref={fileInput} type="file" multiple accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(e) => void readUploads(e.target.files ?? undefined)} />
+                    {uploadArtifacts.length > 0 && (
+                      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background">
+                        <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+                          <p className="text-sm font-medium">{uploadArtifacts.length} file{uploadArtifacts.length === 1 ? "" : "s"} queued</p>
+                          <button type="button" onClick={() => fileInput.current?.click()} className="text-xs font-medium text-accent hover:text-accent-hover">Add more</button>
+                        </div>
+                        <div className="divide-y divide-border">
+                          {uploadArtifacts.map((artifact) => (
+                            <div key={artifact.id} className="flex items-center gap-3 px-3 py-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card"><IconFile className="h-4 w-4 text-muted" /></span>
+                              <p className="min-w-0 flex-1 truncate text-sm text-muted">{artifact.title}</p>
+                              <button type="button" onClick={() => removeQueuedUpload(artifact.id)} className="text-xs text-subtle hover:text-danger">Remove</button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {errors.sourceText && <p className="mt-2 text-xs text-danger">{errors.sourceText}</p>}
                   </div>
                 )}
@@ -475,7 +569,7 @@ export function OnboardingFlowPolished() {
                 ) : (
                   <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
                     <button onClick={() => setStep("role")} className="text-sm text-subtle hover:text-muted">Back</button>
-                    <button onClick={() => void reconstruct()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconSpark /> Reconstruct this work</button>
+                    <button onClick={() => void reconstruct()} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconSpark /> {mode === "upload" && uploadArtifacts.length > 1 ? `Reconstruct ${uploadArtifacts.length} sources` : "Reconstruct this work"}</button>
                   </div>
                 )}
               </div>
