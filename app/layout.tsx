@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PolishRuntime } from "@/components/polish-runtime";
 import "./globals.css";
 
 const geist = Geist({
@@ -24,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable} antialiased`}>
       <body className="min-h-screen bg-background font-sans text-foreground">
+        <PolishRuntime />
         {children}
       </body>
     </html>
