@@ -38,6 +38,10 @@ function textOf(response: GeminiResponse): string {
     .trim();
 }
 
+function runtimeModel() {
+  return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+}
+
 export async function completeJson<T>(
   system: string,
   user: string,
@@ -45,7 +49,7 @@ export async function completeJson<T>(
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return null;
 
-  const model = process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+  const model = runtimeModel();
 
   try {
     const response = await fetch(
@@ -82,6 +86,57 @@ export async function completeJson<T>(
     if (!raw) return null;
 
     return parseJson<T>(raw);
+  } catch {
+    return null;
+  }
+}
+
+export async function extractDocumentTextWithGemini(input: {
+  mimeType: string;
+  base64: string;
+  filename: string;
+}): Promise<string | null> {
+  const key = process.env.GEMINI_API_KEY?.trim();
+  if (!key) return null;
+  const model = runtimeModel();
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": key,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: input.mimeType,
+                    data: input.base64,
+                  },
+                },
+                {
+                  text: `Extract the readable work content from ${input.filename}. Preserve headings, lists, table meaning, decisions, dates, owners, requirements, risks, and open questions. Return plain text only. Do not summarise or invent missing content.`,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: "text/plain",
+            maxOutputTokens: 8000,
+            temperature: 0,
+          },
+        }),
+      },
+    );
+    if (!response.ok) return null;
+    const payload = (await response.json()) as GeminiResponse;
+    return textOf(payload) || null;
   } catch {
     return null;
   }
