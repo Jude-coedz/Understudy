@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { completeJson } from "@/lib/llm";
+import { completeJsonDetailed } from "@/lib/llm";
 import {
   normalizeWholeRoleSynthesis,
   WHOLE_ROLE_SYNTHESIS_SYSTEM,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     current: body.current,
   };
 
-  const llm = await completeJson<WholeRoleModelOutput>(
+  const model = await completeJsonDetailed<WholeRoleModelOutput>(
     WHOLE_ROLE_SYNTHESIS_SYSTEM,
     `TRANSITION\n${JSON.stringify(transition, null, 2)}\n\nEVIDENCE_SET\n${JSON.stringify(
       sources.map((source) => ({
@@ -85,8 +85,9 @@ export async function POST(req: Request) {
   );
 
   return NextResponse.json({
-    result: normalizeWholeRoleSynthesis(input, llm, Boolean(llm)),
-    usedModel: Boolean(llm),
+    result: normalizeWholeRoleSynthesis(input, model.data, model.status.state === "ok"),
+    usedModel: model.status.state === "ok",
+    modelStatus: model.status,
     truncated: rawSources.reduce((sum, source) => sum + (source.text?.length ?? 0), 0) > MAX_COMBINED_CHARS,
   });
 }
