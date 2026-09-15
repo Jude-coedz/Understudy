@@ -1,0 +1,33 @@
+name: Apply onboarding multi-file fix
+
+on:
+  push:
+    branches:
+      - fix-onboarding-multi-file
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix-onboarding-multi-file
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/fix-onboarding-multi-file.mjs
+      - name: Commit generated fix
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add components/onboarding-flow-polished.tsx
+          git commit -m "Fix onboarding multi-file evidence selection"
+          git push origin HEAD:fix-onboarding-multi-file
