@@ -216,6 +216,45 @@ export function EvidenceWorkspace() {
     }
   }
 
+  function handleNextCheckpoint() {
+    if (!evidenceSources.length) {
+      setStage("sources");
+      setShowAdd(true);
+      setMessage("Add the first real artifact for this role, then Understudy can begin reconstructing the work.");
+      return;
+    }
+
+    if (!evidenceComplete) {
+      setStage("sources");
+      void finishEvidenceCollection();
+      return;
+    }
+
+    if (unreviewed.length) {
+      requestStage("map");
+      return;
+    }
+
+    if (criticalGaps.length || (activeInterviewGaps.length && !interviewSources.length)) {
+      requestStage("interview");
+      return;
+    }
+
+    requestStage("handoff");
+  }
+
+  const checkpointActionLabel = !evidenceSources.length
+    ? "Add evidence"
+    : !evidenceComplete
+      ? synthesisPhase >= 0 ? "Synthesizing evidence…" : "Finish evidence collection"
+      : unreviewed.length
+        ? "Review reconstruction"
+        : criticalGaps.length
+          ? "Open interview"
+          : activeInterviewGaps.length && !interviewSources.length
+            ? "Review interview questions"
+            : "Open handoff";
+
   async function analyseSource(input: { title: string; text: string; provider: string; kind?: EvidenceKind }) {
     if (!workspace || input.text.trim().length < 20) return;
     setMessage("");
@@ -627,7 +666,7 @@ export function EvidenceWorkspace() {
                           : "Critical gaps are clear. The handoff can now be prepared."
                 }
               </p>
-              <button onClick={() => requestStage(recommended)} className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-sm font-medium text-background">Go to next step <IconChevronRight /></button>
+              <button disabled={synthesisPhase >= 0} onClick={handleNextCheckpoint} className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-sm font-medium text-background disabled:cursor-wait disabled:opacity-50">{checkpointActionLabel} <IconChevronRight /></button>
             </div>
 
             <div className="rounded-xl border border-border bg-card p-4">
