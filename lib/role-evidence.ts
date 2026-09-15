@@ -84,6 +84,7 @@ export type WholeRoleModelOutput = {
     question?: string;
     topic?: string;
     priority?: string;
+    sourceIds?: string[];
   }>;
 };
 
@@ -129,7 +130,6 @@ function evidenceStatus(sourceIds: string[], sources: WholeRoleSource[]): RoleEv
   const support = sources.filter((source) => sourceIds.includes(source.id));
   const primary = support.filter((source) => source.confidence === "Primary");
 
-  // "Covered" means corroborated within the evidence set, not "the whole role is complete".
   if (primary.length >= 2 || (primary.length >= 1 && support.length >= 2)) return "Covered";
   if (primary.length >= 1 || support.length >= 2) return "Partial";
   return "Thin";
@@ -272,6 +272,7 @@ export function normalizeWholeRoleSynthesis(
       question: compact(gap.question, "What important context is still missing?", 240),
       topic: compact(gap.topic, "Role context", 100),
       priority: gap.priority === "Critical" ? ("Critical" as const) : ("Important" as const),
+      sourceIds: uniqueStrings(gap.sourceIds, 6).filter((id) => validSourceIds.has(id)),
     }));
 
   const responsibilities = facetCoverage(domains, "responsibilities");
@@ -315,11 +316,16 @@ For every observed domain:
 - identify which knowledge facets the evidence actually supports: responsibilities, activeWork, decisions, ownership
 - list material missing context inside that domain
 
+For every handoff gap/question:
+- ask only something that remains unanswered after considering the full evidence set
+- include the exact sourceIds that created or support that unresolved question
+- never cite a sourceId that was not supplied
+- if the question is a broad hypothesis rather than traceable to a specific source, return an empty sourceIds array rather than inventing provenance
+
 Also:
 - consolidate duplicate projects/work areas across sources
 - identify contradictions between sources
-- generate only handoff questions that remain unanswered after considering the full set
-- preserve provenance; never cite a sourceId that was not supplied
+- preserve provenance
 - primary evidence should outweigh AI-recovered context when sources conflict
 - do NOT return a percentage for "role completeness" and do NOT claim the whole role is complete
 
@@ -338,5 +344,5 @@ Return JSON only:
   "contradictions": [{"claim": string, "sourceIds": string[]}],
   "projects": [{"name": string, "state": string, "ownership": string, "sourceIds": string[]}],
   "risks": [{"title": string, "detail": string, "severity": "High"|"Medium"}],
-  "gaps": [{"question": string, "topic": string, "priority": "Critical"|"Important"}]
+  "gaps": [{"question": string, "topic": string, "priority": "Critical"|"Important", "sourceIds": string[]}]
 }`;
