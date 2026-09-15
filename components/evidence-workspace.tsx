@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
+import { extractFileText, SUPPORTED_UPLOAD_ACCEPT, SUPPORTED_UPLOAD_LABEL } from "@/lib/file-extraction";
 import type { WholeRoleSynthesisResult } from "@/lib/role-evidence";
 import {
   getCurrentWorkspace,
@@ -270,14 +271,15 @@ export function EvidenceWorkspace() {
 
   async function readUpload(file?: File) {
     if (!file) return;
-    const extension = `.${file.name.split(".").pop()?.toLowerCase()}`;
-    if (![".txt", ".md", ".json", ".csv"].includes(extension)) {
-      setMessage("This build currently parses TXT, Markdown, JSON, CSV and Google Docs. PDF/DOCX is in the backlog.");
-      return;
+    setMessage("");
+    try {
+      const text = await extractFileText(file);
+      setSourceTitle(file.name);
+      setSourceText(text);
+      setSourceProvider("Uploaded document");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Understudy could not read this file.");
     }
-    setSourceTitle(file.name);
-    setSourceText((await file.text()).slice(0, 60_000));
-    setSourceProvider("Uploaded document");
   }
 
   async function connectDrive() {
@@ -494,7 +496,7 @@ export function EvidenceWorkspace() {
                     ))}
                   </div>
                   {sourceMode === "paste" && <><input value={sourceTitle} onChange={(event) => { setSourceTitle(event.target.value); setSourceProvider("Pasted evidence"); }} placeholder="Source title" className="mt-4 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none placeholder:text-faint" /><textarea value={sourceText} onChange={(event) => { setSourceText(event.target.value); setSourceProvider("Pasted evidence"); }} rows={8} placeholder="Paste a PRD, roadmap, runbook, project note, meeting summary, or other work evidence…" className="mt-2 w-full rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none placeholder:text-faint" /></>}
-                  {sourceMode === "upload" && <><button onClick={() => fileInput.current?.click()} className="mt-4 flex h-32 w-full flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-background"><IconFile className="text-muted" /><span className="mt-2 text-sm text-muted">Choose TXT, Markdown, JSON, or CSV</span></button><input ref={fileInput} type="file" className="hidden" accept=".txt,.md,.json,.csv" onChange={(event) => void readUpload(event.target.files?.[0])} />{sourceTitle && <p className="mt-2 text-xs text-muted">Selected: {sourceTitle}</p>}</>}
+                  {sourceMode === "upload" && <><button onClick={() => fileInput.current?.click()} className="mt-4 flex h-32 w-full flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-background"><IconFile className="text-muted" /><span className="mt-2 text-sm text-muted">Choose {SUPPORTED_UPLOAD_LABEL}</span></button><input ref={fileInput} type="file" className="hidden" accept={SUPPORTED_UPLOAD_ACCEPT} onChange={(event) => void readUpload(event.target.files?.[0])} />{sourceTitle && <p className="mt-2 text-xs text-muted">Selected: {sourceTitle}</p>}</>}
                   {sourceMode === "drive" && <div className="mt-4 rounded-lg border border-border bg-background p-5 text-center"><p className="text-sm font-medium">Choose a work file from Google Drive</p><p className="mx-auto mt-1 max-w-lg text-xs leading-5 text-subtle">Understudy only receives the file you choose. After analysing it, you can immediately add another source.</p><button onClick={() => void connectDrive()} className="mt-3 rounded-lg border border-border-strong bg-card px-3 py-2 text-sm text-muted hover:bg-card-hover">Connect Google & choose file</button>{sourceProvider === "Google Drive" && sourceTitle && <p className="mt-2 text-xs text-ok">Selected: {sourceTitle}</p>}</div>}
                   {analysisPhase >= 0 ? <div className="mt-4 space-y-2 rounded-lg border border-border bg-background p-3">{ANALYSIS_PHASES.map((phase, index) => <div key={phase} className={`flex items-center gap-2 text-xs ${index <= analysisPhase ? "text-muted" : "text-faint"}`}><span className={`h-1.5 w-1.5 rounded-full ${index < analysisPhase ? "bg-ok" : index === analysisPhase ? "animate-pulse bg-accent" : "bg-surface-3"}`} />{phase}</div>)}</div> : <div className="mt-4 flex justify-end"><button disabled={!sourceTitle.trim() || sourceText.trim().length < 20} onClick={() => void analyseSource({ title: sourceTitle, text: sourceText, provider: sourceProvider })} className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-35"><IconSpark /> Analyse and add</button></div>}
                 </div>
