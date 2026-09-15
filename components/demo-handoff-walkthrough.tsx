@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Transition } from "@/data/v2-demo";
 import {
   IconAlert,
@@ -55,7 +55,7 @@ function StepProgress({ step }: { step: DemoStep }) {
   );
 }
 
-function NextButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function NextButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -75,7 +75,6 @@ export function DemoHandoffWalkthrough({ transition }: { transition: Transition 
   const evidenceSources = transition.sources.filter((source) => source.kind !== "interview");
   const primaryCount = evidenceSources.filter((source) => source.kind === "document" || source.kind === "github").length;
   const aiCount = evidenceSources.filter((source) => source.kind === "ai-context").length;
-  const interviewCount = transition.sources.filter((source) => source.kind === "interview").length;
   const assignedProjects = transition.projects.filter((project) => !/unassigned|unknown|unclear/i.test(project.ownership));
   const criticalGaps = transition.gaps.filter((gap) => gap.priority === "Critical");
 
@@ -136,7 +135,7 @@ export function DemoHandoffWalkthrough({ transition }: { transition: Transition 
                 </div>
               </div>
               <div className="mt-5 space-y-3 border-t border-border pt-4 text-sm text-muted">
-                <div className="flex justify-between gap-4"><span>Evidence available</span><span className="font-medium text-foreground">{transition.sources.length} sources</span></div>
+                <div className="flex justify-between gap-4"><span>Starting evidence</span><span className="font-medium text-foreground">{evidenceSources.length} sources</span></div>
                 <div className="flex justify-between gap-4"><span>Work areas reconstructed</span><span className="font-medium text-foreground">{transition.projects.length}</span></div>
                 <div className="flex justify-between gap-4"><span>Open handoff questions</span><span className="font-medium text-foreground">{transition.gaps.length}</span></div>
                 <div className="flex justify-between gap-4"><span>Next owner</span><span className="font-medium text-foreground">{transition.successor}</span></div>
@@ -184,7 +183,7 @@ export function DemoHandoffWalkthrough({ transition }: { transition: Transition 
                 </p>
 
                 <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card">
-                  {transition.sources.map((source, index) => (
+                  {evidenceSources.map((source, index) => (
                     <div key={source.id} className={`flex items-start gap-3 px-4 py-4 ${index ? "border-t border-border" : ""}`}>
                       <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span>
                       <div className="min-w-0 flex-1">
@@ -199,7 +198,7 @@ export function DemoHandoffWalkthrough({ transition }: { transition: Transition 
                 </div>
 
                 <div className="mt-5 rounded-xl border border-border bg-background p-4 text-sm leading-6 text-muted">
-                  <span className="font-medium text-foreground">What matters here:</span> {primaryCount} sources are primary evidence{aiCount ? `, ${aiCount} is AI-recovered` : ""}{interviewCount ? `, and ${interviewCount} is self-reported interview context` : ""}. Understudy keeps those confidence levels separate.
+                  <span className="font-medium text-foreground">What matters here:</span> {primaryCount} sources are primary evidence{aiCount ? ` and ${aiCount} is AI-recovered` : ""}. Interview context is deliberately handled later instead of being mixed into the starting evidence step.
                 </div>
 
                 <div className="mt-7"><NextButton onClick={() => go("understand")}>See what Understudy reconstructed</NextButton></div>
