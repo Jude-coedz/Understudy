@@ -149,19 +149,23 @@ export function normalizeReconstruction(
   const fallback = fallbackReconstruction(input);
   const model = raw ?? fallback;
   const coverage = model.coverage ?? fallback.coverage!;
+  const aiRecovered = input.source.kind === "ai-context";
 
   const projects = (model.projects ?? fallback.projects ?? [])
     .filter((project) => project?.name)
     .slice(0, 8)
-    .map((project) => ({
-      name: compact(project.name, input.source.title).slice(0, 90),
-      state: compact(project.state, "Needs review").slice(0, 40),
-      ownership: compact(
-        project.ownership,
-        `${input.transition.person} → ${input.transition.successor}`,
-      ).slice(0, 80),
-      evidence: clamp(project.evidence ?? 55, 55),
-    }));
+    .map((project) => {
+      const evidence = clamp(project.evidence ?? 55, 55);
+      return {
+        name: compact(project.name, input.source.title).slice(0, 90),
+        state: compact(project.state, "Needs review").slice(0, 40),
+        ownership: compact(
+          project.ownership,
+          `${input.transition.person} → ${input.transition.successor}`,
+        ).slice(0, 80),
+        evidence: aiRecovered ? Math.min(evidence, 65) : evidence,
+      };
+    });
 
   const risks = (model.risks ?? fallback.risks ?? [])
     .filter((risk) => risk?.title)
@@ -196,13 +200,25 @@ export function normalizeReconstruction(
       ])]
     : [];
 
-  const metricValues = {
+  const rawMetricValues = {
     responsibilities: clamp(coverage.responsibilities ?? 50),
     activeWork: clamp(coverage.activeWork ?? 50),
     decisions: clamp(coverage.decisions ?? 45),
     tacitKnowledge: clamp(coverage.tacitKnowledge ?? 45),
     ownership: clamp(coverage.ownership ?? 50),
   };
+
+  // AI-recovered context is useful for rationale and tacit knowledge, but it is
+  // not primary evidence. Cap how much readiness it can establish by itself.
+  const metricValues = aiRecovered
+    ? {
+        responsibilities: Math.min(rawMetricValues.responsibilities, 65),
+        activeWork: Math.min(rawMetricValues.activeWork, 60),
+        decisions: Math.min(rawMetricValues.decisions, 70),
+        tacitKnowledge: Math.min(rawMetricValues.tacitKnowledge, 72),
+        ownership: Math.min(rawMetricValues.ownership, 55),
+      }
+    : rawMetricValues;
 
   // Successor review is a real product event and must not be invented by the model.
   const readiness = clamp(
@@ -214,11 +230,13 @@ export function normalizeReconstruction(
   );
 
   const confidence: SourceItem["confidence"] =
-    input.source.kind === "ai-context"
+    aiRecovered
       ? "AI-recovered"
       : input.source.kind === "interview"
         ? "Self-reported"
         : "Primary";
+
+  const importedDate = new Date().toLocaleDateString("en", { month: "short", day: "numeric" });
 
   return {
     summary: compact(model.summary, fallback.summary ?? "Evidence reconstructed."),
@@ -227,7 +245,9 @@ export function normalizeReconstruction(
       title: input.source.title,
       kind: input.source.kind,
       provider: input.source.provider,
-      meta: `Imported ${new Date().toLocaleDateString("en", { month: "short", day: "numeric" })} · awaiting review`,
+      meta: aiRecovered
+        ? `Imported ${importedDate} · AI-recovered · cross-check required`
+        : `Imported ${importedDate} · awaiting review`,
       extracted: (model.extracted ?? fallback.extracted ?? ["Evidence imported"]).slice(0, 6),
       confidence,
     },
@@ -237,11 +257,11 @@ export function normalizeReconstruction(
     readiness,
     resolvedQuestions,
     metrics: [
-      { label: "Responsibilities", value: metricValues.responsibilities, note: "Evidence-derived" },
+      { label: "Responsibilities", value: metricValues.responsibilities, note: aiRecovered ? "AI-recovered; verify" : "Evidence-derived" },
       { label: "Active work", value: metricValues.activeWork, note: `${projects.length} work areas` },
-      { label: "Decisions", value: metricValues.decisions, note: "Rationale coverage" },
-      { label: "Tacit knowledge", value: metricValues.tacitKnowledge, note: input.source.kind === "ai-context" ? "AI context imported" : "Needs interview" },
-      { label: "Ownership", value: metricValues.ownership, note: "Assignment confidence" },
+      { label: "Decisions", value: metricValues.decisions, note: aiRecovered ? "Recovered rationale; verify" : "Rationale coverage" },
+      { label: "Tacit knowledge", value: metricValues.tacitKnowledge, note: aiRecovered ? "AI context imported" : "Needs interview" },
+      { label: "Ownership", value: metricValues.ownership, note: aiRecovered ? "Claims need corroboration" : "Assignment confidence" },
       { label: "Successor review", value: 0, note: "Not reviewed" },
     ],
   };
@@ -269,7 +289,8 @@ Important rules:
 3. If evidence is weak, lower coverage instead of guessing.
 4. Prefer 1-6 useful items over long generic lists.
 5. Gaps should become specific interview questions that a successor would benefit from.
-6. Return JSON only.
+6. When source.kind is ai-context, treat it as recovered assistant output rather than verified primary evidence. Preserve useful rationale, but keep consequential ownership, commitment, stakeholder, and current-state claims open for verification when appropriate.
+7. Return JSON only.
 
 Return this shape:
 {
