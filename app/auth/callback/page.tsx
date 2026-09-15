@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hydrateAuthenticatedWorkspaces } from "@/lib/cloud-workspaces";
 import { completeSupabaseOAuthFromHash } from "@/lib/supabase-browser";
 
 export default function AuthCallbackPage() {
@@ -12,7 +13,9 @@ export default function AuthCallbackPage() {
       try {
         await completeSupabaseOAuthFromHash(window.location.hash);
         if (!active) return;
-        setMessage("Account connected. Loading your workspace…");
+        setMessage("Account connected. Syncing your workspaces…");
+        await hydrateAuthenticatedWorkspaces();
+        if (!active) return;
         window.history.replaceState({}, "", "/auth/callback");
         window.location.replace("/workspace");
       } catch (error) {
