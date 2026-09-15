@@ -72,7 +72,11 @@ async function inflateEntry(bytes: Uint8Array, entry: ZipEntry) {
   const compressed = bytes.subarray(start, start + entry.compressedSize);
   if (entry.method === 0) return compressed;
   if (entry.method !== 8) throw new Error(`Unsupported compression method in ${entry.name}.`);
-  const stream = new Blob([compressed]).stream().pipeThrough(
+  const compressedBuffer = compressed.buffer.slice(
+    compressed.byteOffset,
+    compressed.byteOffset + compressed.byteLength,
+  ) as ArrayBuffer;
+  const stream = new Blob([compressedBuffer]).stream().pipeThrough(
     new DecompressionStream("deflate-raw" as CompressionFormat),
   );
   return new Uint8Array(await new Response(stream).arrayBuffer());
