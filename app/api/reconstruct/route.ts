@@ -46,6 +46,10 @@ export async function POST(req: Request) {
   }
 
   const input = body as ReconstructionInput;
+  const interviewContext = source.kind === "interview"
+    ? `\n\nOPEN_GAPS\n${JSON.stringify(input.openGaps ?? [], null, 2)}\n\nPRIMARY_QUESTION\n${input.primaryQuestion ?? ""}`
+    : "";
+
   const llm = await completeJson<ModelReconstruction>(
     RECONSTRUCTION_SYSTEM,
     `TRANSITION\n${JSON.stringify(transition, null, 2)}\n\nSOURCE\n${JSON.stringify(
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
       },
       null,
       2,
-    )}`,
+    )}${interviewContext}`,
   );
 
   return NextResponse.json({
