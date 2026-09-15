@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PolishRuntime } from "@/components/polish-runtime";
+import { CloudSessionBridge } from "@/components/cloud-session-bridge";
 import "./globals.css";
 import "./polish.css";
 
@@ -27,6 +28,7 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable} ${geistMono.variable} antialiased`}>
       <body className="min-h-screen bg-background font-sans text-foreground">
         <PolishRuntime />
+        <CloudSessionBridge />
         {children}
       </body>
     </html>

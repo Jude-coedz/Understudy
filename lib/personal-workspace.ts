@@ -6,7 +6,7 @@ export type UnderstudyIdentity = {
   name: string;
   email?: string;
   avatarUrl?: string;
-  provider: "google" | "guest";
+  provider: "google" | "guest" | "account";
 };
 
 export type InterviewGapDisposition =
@@ -68,11 +68,13 @@ export function getIdentity(): UnderstudyIdentity {
 export function saveIdentity(identity: UnderstudyIdentity) {
   if (!browser()) return;
   window.localStorage.setItem(IDENTITY_KEY, JSON.stringify(identity));
+  window.dispatchEvent(new CustomEvent("understudy:identity-changed", { detail: identity }));
 }
 
 export function clearIdentity() {
   if (!browser()) return;
   window.localStorage.removeItem(IDENTITY_KEY);
+  window.dispatchEvent(new CustomEvent("understudy:identity-changed"));
 }
 
 function workspaceKey(ownerId = getIdentity().id) {
@@ -113,6 +115,7 @@ export function saveWorkspace(workspace: PersonalWorkspace) {
   const next = [normalized, ...workspaces.filter((item) => item.id !== normalized.id)];
   window.localStorage.setItem(workspaceKey(normalized.ownerId), JSON.stringify(next));
   window.localStorage.setItem(currentKey(normalized.ownerId), normalized.id);
+  window.dispatchEvent(new CustomEvent("understudy:workspace-saved", { detail: normalized }));
 }
 
 export function setCurrentWorkspace(id: string, ownerId = getIdentity().id) {
