@@ -1,14 +1,5 @@
-import { EvidenceWorkspace } from "@/components/evidence-workspace";
-import { Shell } from "@/components/shell";
-import { WorkspaceContextualGuide } from "@/components/workspace-contextual-guide";
-import { WorkspaceEvidenceStatus } from "@/components/workspace-evidence-status";
+import { LinearWorkspace } from "@/components/linear-workspace";
 
 export default function WorkspacePage() {
-  return (
-    <Shell>
-      <WorkspaceEvidenceStatus />
-      <EvidenceWorkspace />
-      <WorkspaceContextualGuide />
-    </Shell>
-  );
+  return <LinearWorkspace />;
 }
