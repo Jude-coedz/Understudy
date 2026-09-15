@@ -62,29 +62,29 @@ export function SuccessorReviewPanel() {
     );
   }
 
-  const transition = workspace.transition;
-  const activeReview = review ?? blankReview(workspace);
+  const currentWorkspace = workspace;
+  const transition = currentWorkspace.transition;
+  const activeReview = review ?? blankReview(currentWorkspace);
   const completion = reviewCompletion(activeReview);
   const allChecks = completion === 100;
 
   function persistReview(nextReview: SuccessorReview, extraGap?: string) {
-    if (!workspace) return;
     const gap = extraGap?.trim();
     const transitionWithGap = gap
       ? {
-          ...workspace.transition,
+          ...currentWorkspace.transition,
           gaps: [
-            ...workspace.transition.gaps,
+            ...currentWorkspace.transition.gaps,
             { question: gap, topic: "Successor review", priority: "Important" as const },
           ].filter(
             (item, index, array) =>
               array.findIndex((candidate) => candidate.question.toLowerCase() === item.question.toLowerCase()) === index,
           ),
         }
-      : workspace.transition;
+      : currentWorkspace.transition;
     const transitionWithMetric = applyReviewMetric(transitionWithGap, nextReview);
     const next: PersonalWorkspace = {
-      ...workspace,
+      ...currentWorkspace,
       updatedAt: new Date().toISOString(),
       transition: transitionWithMetric,
       successorReview: nextReview,
@@ -95,7 +95,7 @@ export function SuccessorReviewPanel() {
 
   function ensureReview() {
     if (review) return review;
-    const next = blankReview(workspace);
+    const next = blankReview(currentWorkspace);
     persistReview(next);
     setMessage("Successor review started. This is now a real verification state, not an inferred score.");
     return next;
