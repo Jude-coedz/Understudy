@@ -8,11 +8,13 @@ import {
   IconAsk,
   IconHome,
   IconPlug,
+  IconSpark,
   IconTransition,
 } from "./icons";
 
 const PRIMARY_NAV = [
   { href: "/workspace", label: "Workspace", icon: IconHome },
+  { href: "/recover-ai", label: "Recover AI context", icon: IconSpark },
   { href: "/transitions", label: "Demo transitions", icon: IconTransition },
   { href: "/ask", label: "Ask Understudy", icon: IconAsk },
 ] as const;
