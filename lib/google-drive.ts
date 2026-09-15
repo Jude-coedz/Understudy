@@ -12,6 +12,12 @@ type PickerFile = {
   mimeType: string;
 };
 
+export type GoogleDriveConfig = {
+  configured: boolean;
+  clientId: string;
+  apiKey: string;
+};
+
 declare global {
   interface Window {
     google?: any;
@@ -21,6 +27,8 @@ declare global {
 
 const GIS_SRC = "https://accounts.google.com/gsi/client";
 const GAPI_SRC = "https://apis.google.com/js/api.js";
+
+let cachedConfig: GoogleDriveConfig | null = null;
 
 function loadScript(src: string) {
   return new Promise<void>((resolve, reject) => {
@@ -38,19 +46,43 @@ function loadScript(src: string) {
   });
 }
 
+export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveConfig> {
+  if (cachedConfig && !force) return cachedConfig;
+
+  try {
+    const response = await fetch("/api/google-config", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Google configuration endpoint is unavailable.");
+    const payload = (await response.json()) as Partial<GoogleDriveConfig>;
+    cachedConfig = {
+      configured: Boolean(payload.configured && payload.clientId && payload.apiKey),
+      clientId: String(payload.clientId || ""),
+      apiKey: String(payload.apiKey || ""),
+    };
+  } catch {
+    cachedConfig = { configured: false, clientId: "", apiKey: "" };
+  }
+
+  return cachedConfig;
+}
+
+// Kept synchronous for existing UI labels. The actual connection always re-checks
+// the Worker runtime config before talking to Google, so dashboard-managed values
+// do not need to be bundled into the frontend at build time.
 export function googleDriveConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID &&
-      process.env.NEXT_PUBLIC_GOOGLE_API_KEY,
-  );
+  if (cachedConfig) return cachedConfig.configured;
+  if (typeof window !== "undefined") void loadGoogleDriveConfig();
+  return true;
 }
 
 export async function connectGoogleDrive(): Promise<{
   accessToken: string;
   identity: UnderstudyIdentity;
 }> {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  if (!clientId) throw new Error("Google client ID is not configured.");
+  const config = await loadGoogleDriveConfig();
+  if (!config.clientId) throw new Error("Google client ID is not configured on this deployment.");
 
   await loadScript(GIS_SRC);
   if (!window.google?.accounts?.oauth2) {
@@ -59,7 +91,7 @@ export async function connectGoogleDrive(): Promise<{
 
   const token = await new Promise<string>((resolve, reject) => {
     const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
+      client_id: config.clientId,
       scope: "openid email profile https://www.googleapis.com/auth/drive.file",
       prompt: "consent",
       callback: (response: GoogleTokenResponse) => {
@@ -107,8 +139,8 @@ async function loadPicker() {
 }
 
 export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFile | null> {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
-  if (!apiKey) throw new Error("Google API key is not configured.");
+  const config = await loadGoogleDriveConfig();
+  if (!config.apiKey) throw new Error("Google Picker API key is not configured on this deployment.");
 
   await loadPicker();
   if (!window.google?.picker) throw new Error("Google Picker did not load.");
@@ -122,7 +154,7 @@ export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFi
       .setTitle("Choose work evidence for Understudy")
       .addView(view)
       .setOAuthToken(accessToken)
-      .setDeveloperKey(apiKey)
+      .setDeveloperKey(config.apiKey)
       .setCallback((data: any) => {
         const action = data?.[window.google.picker.Response.ACTION];
         if (action === window.google.picker.Action.CANCEL) {

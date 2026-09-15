@@ -7,6 +7,7 @@ on:
       - v2-handoff-ui
       - v2-functional-sources
       - v2-guided-onboarding
+      - runtime-google-config
   pull_request:
     branches:
       - main
