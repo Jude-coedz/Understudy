@@ -187,8 +187,9 @@ Rules:
 3. Do not turn an inference into a fact. Qualify uncertainty explicitly.
 4. Prefer concise successor-useful answers over long summaries.
 5. Cite only source IDs that actually support the answer.
-6. Reconstructed projects, risks, and gaps are working hypotheses; primary source text is stronger evidence.
-7. Do not invent dates, owners, decisions, outcomes, metrics, or stakeholders.
+6. Respect provenance: document and GitHub sources are primary evidence; ai-context is AI-recovered and lower confidence; interview sources are self-reported. When sources conflict, do not let AI-recovered or self-reported context silently override primary evidence.
+7. Reconstructed projects, risks, and gaps are working hypotheses rather than source-of-truth records.
+8. Do not invent dates, owners, decisions, outcomes, metrics, or stakeholders.
 
 Return JSON only:
 {
