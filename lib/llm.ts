@@ -1,3 +1,5 @@
+import type { ModelFailureReason, ModelStatus } from "@/lib/model-status";
+
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 type GeminiResponse = {
@@ -6,6 +8,11 @@ type GeminiResponse = {
       parts?: Array<{ text?: string }>;
     };
   }>;
+};
+
+export type GeminiCallResult<T> = {
+  data: T | null;
+  status: ModelStatus;
 };
 
 function parseJson<T>(raw: string): T | null {
@@ -42,12 +49,24 @@ function runtimeModel() {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
 }
 
-export async function completeJson<T>(
+function failureForStatus(status: number): { reason: ModelFailureReason; retryable: boolean } {
+  if (status === 401 || status === 403) return { reason: "authentication", retryable: false };
+  if (status === 429) return { reason: "rate_limited", retryable: true };
+  if (status >= 500) return { reason: "service_unavailable", retryable: true };
+  return { reason: "request_failed", retryable: status === 408 || status === 409 };
+}
+
+export async function completeJsonDetailed<T>(
   system: string,
   user: string,
-): Promise<T | null> {
+): Promise<GeminiCallResult<T>> {
   const key = process.env.GEMINI_API_KEY?.trim();
-  if (!key) return null;
+  if (!key) {
+    return {
+      data: null,
+      status: { state: "fallback", reason: "not_configured", retryable: false },
+    };
+  }
 
   const model = runtimeModel();
 
@@ -79,16 +98,45 @@ export async function completeJson<T>(
       },
     );
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const failure = failureForStatus(response.status);
+      return {
+        data: null,
+        status: { state: "fallback", reason: failure.reason, retryable: failure.retryable, status: response.status },
+      };
+    }
 
     const payload = (await response.json()) as GeminiResponse;
     const raw = textOf(payload);
-    if (!raw) return null;
+    if (!raw) {
+      return {
+        data: null,
+        status: { state: "fallback", reason: "empty_response", retryable: true },
+      };
+    }
 
-    return parseJson<T>(raw);
+    const parsed = parseJson<T>(raw);
+    if (!parsed) {
+      return {
+        data: null,
+        status: { state: "fallback", reason: "invalid_response", retryable: true },
+      };
+    }
+
+    return { data: parsed, status: { state: "ok", retryable: false } };
   } catch {
-    return null;
+    return {
+      data: null,
+      status: { state: "fallback", reason: "network", retryable: true },
+    };
   }
+}
+
+export async function completeJson<T>(
+  system: string,
+  user: string,
+): Promise<T | null> {
+  return (await completeJsonDetailed<T>(system, user)).data;
 }
 
 export async function extractDocumentTextWithGemini(input: {
