@@ -91,20 +91,40 @@ function mergeAIContext(
     gaps: mergePreferExisting(previous.gaps, result.gaps, (item) => item.question, 12),
     metrics,
     readiness,
-    status: readiness >= 80 ? "Ready for review" : readiness >= 55 ? "In progress" : "Needs attention",
+    status: "Needs attention",
   };
+
+  const now = new Date().toISOString();
+  const successorReview = workspace.successorReview
+    ? {
+        ...workspace.successorReview,
+        status: "pending" as const,
+        acceptedAt: undefined,
+        updatedAt: now,
+        checks: {
+          roleScope: false,
+          activeWork: false,
+          ownership: false,
+          risks: false,
+          openQuestions: false,
+        },
+      }
+    : undefined;
 
   return {
     ...workspace,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
     transition,
     sourceBodies: {
       ...workspace.sourceBodies,
       [result.source.id]: rawText,
     },
+    reviewedSourceIds: [],
     evidenceCollectionComplete: false,
     evidenceCollectionCompletedAt: undefined,
     interviewGapStates: {},
+    roleEvidence: undefined,
+    successorReview,
   } satisfies PersonalWorkspace;
 }
 
@@ -134,13 +154,14 @@ export function AIContextPage() {
   if (!workspace || !transition) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Create a transition first.</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Choose a handoff first.</h1>
         <p className="mt-2 text-sm leading-6 text-muted">
-          AI context belongs to a specific handoff. Start a transition, then come back here to recover context from an assistant.
+          AI context belongs to one specific handoff so recovered history never gets mixed between people.
         </p>
-        <Link href="/" className="mt-5 inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">
-          Start onboarding
-        </Link>
+        <div className="mt-5 flex justify-center gap-2">
+          <Link href="/handoffs" className="inline-flex rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted">My handoffs</Link>
+          <Link href="/" className="inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link>
+        </div>
       </div>
     );
   }
@@ -184,7 +205,7 @@ export function AIContextPage() {
       setWorkspace(next);
       setImportedTitle(payload.result.source.title);
       setMessage(
-        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} the ${scopeLabel.toLowerCase()} recovery from ${assistant}. It is now AI-recovered evidence with its context boundary preserved in the source provenance.`,
+        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} the ${scopeLabel.toLowerCase()} recovery from ${assistant}. Because this is new evidence, Collect has been reopened and the previous role synthesis and successor verification were invalidated. Return to the handoff to reconnect the full evidence set.`,
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI context import failed.");
@@ -202,18 +223,33 @@ export function AIContextPage() {
           <p className="text-xs font-medium text-subtle">{transition.person} · {transition.role}</p>
           <h1 className="mt-1 text-[28px] font-semibold tracking-[-0.04em]">Recover AI work context</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Recover useful work knowledge from an assistant you already used, then bring it back into the evidence set without treating the assistant as the source of truth.
+            Recover useful work knowledge from an assistant you already used, then bring it back into this handoff without treating the assistant as the source of truth.
           </p>
         </div>
-        <Link href="/workspace" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-muted hover:bg-card-hover">
-          Back to workspace <IconChevronRight />
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/handoffs" className="inline-flex h-10 items-center rounded-lg border border-border bg-card px-3 text-sm text-muted hover:bg-card-hover">My handoffs</Link>
+          <Link href="/workspace" className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-muted hover:bg-card-hover">
+            Back to handoff <IconChevronRight />
+          </Link>
+        </div>
       </div>
 
       {message && (
-        <div className="mt-5 rounded-xl border border-border bg-card p-4 text-sm leading-6 text-muted">
+        <div className={`mt-5 rounded-xl border p-4 text-sm leading-6 text-muted ${importedTitle ? "border-ok/25 bg-ok/5" : "border-border bg-card"}`}>
           {importedTitle && <IconCheck className="mr-2 inline h-4 w-4 text-ok" />}
           {message}
+          {importedTitle && (
+            <div className="mt-4">
+              <Link href="/workspace" className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">Return to Collect and reconnect evidence <IconChevronRight /></Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!importedTitle && workspace.evidenceCollectionComplete && (
+        <div className="mt-5 rounded-xl border border-warning/25 bg-warning/5 p-4">
+          <p className="text-sm font-medium">You can add AI context even this late in the handoff.</p>
+          <p className="mt-1 text-xs leading-5 text-subtle">Because it changes the evidence set, importing it will deliberately reopen Collect, discard the old synthesis, and require the updated sources to be reconnected before interview or successor verification continues.</p>
         </div>
       )}
 
@@ -250,7 +286,7 @@ export function AIContextPage() {
                 </div>
               ))
             ) : (
-              <p className="text-xs leading-5 text-subtle">No AI-recovered evidence has been imported for this transition yet.</p>
+              <p className="text-xs leading-5 text-subtle">No AI-recovered evidence has been imported for this handoff yet.</p>
             )}
           </div>
         </div>
