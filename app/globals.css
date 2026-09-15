@@ -1,23 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --background: #08090b;
-  --foreground: #f7f8f8;
-  --sidebar: #0b0c0e;
-  --surface-1: #0f1012;
-  --surface-2: #141518;
-  --surface-3: #191a1e;
-  --accent: #5e6ad2;
-  --accent-hover: #7884ef;
-  --accent-soft: rgba(94, 106, 210, 0.14);
-  --muted: #a0a5ad;
-  --subtle: #747982;
-  --faint: #565b63;
-  --border: #23252a;
-  --border-strong: #34373d;
-  --danger: #e35d6a;
-  --warning: #d5a94f;
-  --ok: #4aad75;
+  color-scheme: light;
+  --background: #f5f5f2;
+  --foreground: #1c1c1e;
+  --sidebar: #fafaf7;
+  --surface-1: #ffffff;
+  --surface-2: #f0f1ee;
+  --surface-3: #e8e9e5;
+  --accent: #2f6f89;
+  --accent-hover: #245d73;
+  --accent-soft: rgba(47, 111, 137, 0.105);
+  --muted: #5f6266;
+  --subtle: #797c80;
+  --faint: #999c9f;
+  --border: #deded8;
+  --border-strong: #c9cac4;
+  --danger: #b94955;
+  --warning: #9b6a20;
+  --ok: #387b56;
+  --shadow-sm: 0 1px 2px rgba(28, 28, 30, 0.035), 0 1px 8px rgba(28, 28, 30, 0.025);
+  --shadow-md: 0 12px 34px rgba(28, 28, 30, 0.09), 0 2px 8px rgba(28, 28, 30, 0.04);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @theme inline {
@@ -42,14 +46,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
-html,
+html {
+  min-height: 100%;
+  background: var(--background);
+  scroll-behavior: smooth;
+}
+
 body {
   min-height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: -0.006em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -57,7 +69,7 @@ body {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent) 20%, white);
   color: var(--foreground);
 }
 
@@ -76,13 +88,70 @@ select {
   font: inherit;
 }
 
+button,
+a {
+  transition:
+    background-color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    transform 180ms var(--ease-out),
+    opacity 180ms var(--ease-out);
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:not(:disabled):active,
+a:active {
+  transform: scale(0.985);
+}
+
+input,
+textarea,
+select {
+  background: #ffffff;
+  color: var(--foreground);
+  border-color: var(--border);
+  box-shadow: inset 0 1px 0 rgba(28, 28, 30, 0.015);
+  transition:
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    background-color 180ms var(--ease-out);
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: var(--border-strong);
+}
+
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 75%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--accent) 20%, transparent);
   outline-offset: 2px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+input[type="date"] {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  pointer-events: none;
 }
 
 ::-webkit-scrollbar {
@@ -95,15 +164,205 @@ select:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2b2e34;
+  background: #cfd0ca;
   border: 3px solid var(--background);
   border-radius: 999px;
 }
 
+/* Remove the tiny generated-dashboard typography that made the app hard to read. */
+[class*="text-[8px]"],
+[class*="text-[8.5px]"],
+[class*="text-[9px]"],
+[class*="text-[9.5px]"] {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+[class*="text-[10px]"],
+[class*="text-[10.5px]"] {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+[class*="text-[11px]"],
+[class*="text-[11.5px]"] {
+  font-size: 13.5px !important;
+  line-height: 1.55 !important;
+}
+
+[class*="text-[12px]"],
+[class*="text-[12.5px]"] {
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+
+[class*="text-[13px]"] {
+  font-size: 14.5px !important;
+  line-height: 1.55 !important;
+}
+
+/* Neutralise the old violet prototype accents that still exist in utility strings. */
+[class*="#5e6ad2"],
+[class*="#6570df"],
+[class*="#6f79e9"],
+[class*="#777ee8"],
+[class*="#7884ef"],
+[class*="#8d96ff"],
+[class*="#aeb4ff"],
+[class*="#b9beff"],
+[class*="#c4c8ff"] {
+  color: var(--accent) !important;
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border)) !important;
+}
+
+[class*="bg-[rgba(94,106,210"] {
+  background: var(--accent-soft) !important;
+}
+
+[class*="rounded-xl"][class*="border"][class*="bg-card"] {
+  box-shadow: var(--shadow-sm);
+}
+
+[class*="rounded-xl"][class*="border"][class*="bg-background"] {
+  box-shadow: 0 1px 2px rgba(28, 28, 30, 0.025);
+}
+
+/* Progress bars and expanding states should glide rather than jump. */
+[class*="rounded-full"][style*="width"] {
+  transition: width 520ms var(--ease-out);
+}
+
+[data-polish-enter="true"] {
+  animation: understudy-enter 360ms var(--ease-out) both;
+}
+
+[data-polish-card="true"] {
+  will-change: transform, opacity;
+}
+
+.understudy-calendar {
+  width: min(330px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.985);
+  color: var(--foreground);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  animation: understudy-popover 190ms var(--ease-out) both;
+}
+
+.understudy-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px;
+}
+
+.understudy-calendar-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.understudy-calendar-nav {
+  display: flex;
+  gap: 4px;
+}
+
+.understudy-calendar-nav button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--muted);
+}
+
+.understudy-calendar-nav button:hover {
+  background: var(--surface-2);
+  color: var(--foreground);
+}
+
+.understudy-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: 0 12px 12px;
+}
+
+.understudy-calendar-weekday {
+  display: grid;
+  height: 28px;
+  place-items: center;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.understudy-calendar-day {
+  display: grid;
+  aspect-ratio: 1;
+  min-height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.understudy-calendar-day:hover {
+  background: var(--surface-2);
+  color: var(--foreground);
+}
+
+.understudy-calendar-day[data-selected="true"] {
+  background: var(--foreground);
+  color: white;
+  font-weight: 600;
+}
+
+.understudy-calendar-day[data-today="true"]:not([data-selected="true"]) {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+
+.understudy-calendar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  padding: 10px 12px 12px;
+}
+
+.understudy-calendar-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.understudy-calendar-shortcuts button,
+.understudy-calendar-clear {
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 520;
+}
+
+.understudy-calendar-shortcuts button:hover,
+.understudy-calendar-clear:hover {
+  background: var(--surface-2);
+  color: var(--foreground);
+}
+
 .metric-grid {
   background-image:
-    linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px);
+    linear-gradient(to right, rgba(28, 28, 30, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(28, 28, 30, 0.025) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 
@@ -111,4 +370,41 @@ select:focus-visible {
   border-bottom: 1px dotted var(--muted);
   cursor: help;
   color: inherit;
+}
+
+@keyframes understudy-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.997);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes understudy-popover {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
