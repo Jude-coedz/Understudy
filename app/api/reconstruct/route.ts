@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { completeJson } from "@/lib/llm";
+import { completeJsonDetailed } from "@/lib/llm";
 import {
   normalizeReconstruction,
   RECONSTRUCTION_SYSTEM,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     ? `\n\nOPEN_GAPS\n${JSON.stringify(input.openGaps ?? [], null, 2)}\n\nPRIMARY_QUESTION\n${input.primaryQuestion ?? ""}`
     : "";
 
-  const llm = await completeJson<ModelReconstruction>(
+  const model = await completeJsonDetailed<ModelReconstruction>(
     RECONSTRUCTION_SYSTEM,
     `TRANSITION\n${JSON.stringify(transition, null, 2)}\n\nSOURCE\n${JSON.stringify(
       {
@@ -65,7 +65,8 @@ export async function POST(req: Request) {
   );
 
   return NextResponse.json({
-    result: normalizeReconstruction(input, llm),
-    usedModel: Boolean(llm),
+    result: normalizeReconstruction(input, model.data),
+    usedModel: model.status.state === "ok",
+    modelStatus: model.status,
   });
 }
