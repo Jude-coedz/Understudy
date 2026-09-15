@@ -314,6 +314,75 @@ export function EvidenceWorkspace() {
     });
   }
 
+  function removeEvidenceSource(source: SourceItem) {
+    if (!workspace) return;
+    const confirmed = window.confirm(
+      `Remove “${source.title}” from this handoff? Understudy will discard the current role synthesis and rebuild it from the remaining evidence.`,
+    );
+    if (!confirmed) return;
+
+    const now = new Date().toISOString();
+    const sourceBodies = { ...workspace.sourceBodies };
+    delete sourceBodies[source.id];
+    const sources = workspace.transition.sources.filter((item) => item.id !== source.id);
+    const remainingEvidence = sources.filter((item) => item.kind !== "interview");
+    const successorReview = workspace.successorReview
+      ? {
+          ...workspace.successorReview,
+          status: "pending" as const,
+          acceptedAt: undefined,
+          updatedAt: now,
+          checks: {
+            roleScope: false,
+            activeWork: false,
+            ownership: false,
+            risks: false,
+            openQuestions: false,
+          },
+        }
+      : undefined;
+
+    const transition: Transition = {
+      ...workspace.transition,
+      sources,
+      summary: remainingEvidence.length
+        ? `Evidence changed. ${remainingEvidence.length} source${remainingEvidence.length === 1 ? " remains" : "s remain"}. Finish evidence collection again so Understudy can rebuild the role from the updated set.`
+        : "No evidence remains in this handoff. Add real work artifacts before reconstruction can continue.",
+      projects: [],
+      risks: [],
+      gaps: [],
+      metrics: workspace.transition.metrics.map((metric) => ({
+        ...metric,
+        value: 0,
+        note: metric.label === "Successor review"
+          ? successorReview ? "Review reopened after evidence changed" : "Not reviewed"
+          : "Rebuild required after evidence changed",
+      })),
+      readiness: 0,
+      status: "Needs attention",
+    };
+
+    persist({
+      ...workspace,
+      updatedAt: now,
+      transition,
+      sourceBodies,
+      reviewedSourceIds: workspace.reviewedSourceIds.filter((id) => id !== source.id),
+      evidenceCollectionComplete: false,
+      evidenceCollectionCompletedAt: undefined,
+      interviewGapStates: {},
+      roleEvidence: undefined,
+      successorReview,
+    });
+    setStage("sources");
+    setShowAdd(remainingEvidence.length === 0);
+    setMessage(
+      remainingEvidence.length
+        ? `Removed “${source.title}”. The previous role synthesis is no longer valid; finish evidence collection again to rebuild it from the remaining ${remainingEvidence.length} source${remainingEvidence.length === 1 ? "" : "s"}.`
+        : `Removed “${source.title}”. This handoff now has no evidence, so add a source before continuing.`,
+    );
+  }
+
   async function finishEvidenceCollection() {
     if (!workspace || !evidenceSources.length || synthesisPhase >= 0) {
       if (!evidenceSources.length) setMessage("Add at least one real source before finishing evidence collection.");
@@ -505,7 +574,7 @@ export function EvidenceWorkspace() {
               <div className="overflow-hidden rounded-xl border border-border bg-card">
                 {evidenceSources.length ? evidenceSources.map((source, index) => {
                   const verified = workspace.reviewedSourceIds.includes(source.id);
-                  return <div key={source.id} className={`grid gap-3 p-4 sm:grid-cols-[40px_minmax(0,1fr)_130px] sm:items-center ${index ? "border-t border-border" : ""}`}><div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="text-muted" /></div><div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{source.title}</p><span className={`rounded px-1.5 py-0.5 text-[11px] ${verified ? "bg-ok/10 text-ok" : "bg-warning/10 text-warning"}`}>{verified ? "Reviewed" : "Needs review"}</span></div><p className="mt-1 text-xs leading-5 text-subtle">{sourceLabel(source)} · {source.extracted.join(" · ")}</p></div><button onClick={() => requestStage("map")} className="rounded-md border border-border px-2 py-2 text-xs text-muted hover:bg-card-hover">View findings</button></div>;
+                  return <div key={source.id} className={`grid gap-3 p-4 sm:grid-cols-[40px_minmax(0,1fr)_190px] sm:items-center ${index ? "border-t border-border" : ""}`}><div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="text-muted" /></div><div><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-medium">{source.title}</p><span className={`rounded px-1.5 py-0.5 text-[11px] ${verified ? "bg-ok/10 text-ok" : "bg-warning/10 text-warning"}`}>{verified ? "Reviewed" : "Needs review"}</span></div><p className="mt-1 text-xs leading-5 text-subtle">{sourceLabel(source)} · {source.extracted.join(" · ")}</p></div><div className="flex items-center gap-2 sm:justify-end"><button onClick={() => requestStage("map")} className="rounded-md border border-border px-2 py-2 text-xs text-muted hover:bg-card-hover">View findings</button><button onClick={() => removeEvidenceSource(source)} className="rounded-md border border-danger/20 px-2 py-2 text-xs text-danger hover:bg-danger/10">Remove</button></div></div>;
                 }) : <div className="p-10 text-center"><IconFile className="mx-auto text-faint" /><p className="mt-3 text-sm font-medium">No evidence yet</p><p className="mt-1 text-xs text-subtle">Start with a real artifact. Understudy will not invent a role model without evidence.</p></div>}
               </div>
 
