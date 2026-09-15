@@ -16,6 +16,8 @@ export type PersonalWorkspace = {
   transition: Transition;
   sourceBodies: Record<string, string>;
   reviewedSourceIds: string[];
+  evidenceCollectionComplete: boolean;
+  evidenceCollectionCompletedAt?: string;
 };
 
 const IDENTITY_KEY = "understudy:identity:v1";
@@ -67,13 +69,22 @@ function currentKey(ownerId = getIdentity().id) {
   return `understudy:current-workspace:v1:${ownerId}`;
 }
 
+function normalizeWorkspace(workspace: PersonalWorkspace): PersonalWorkspace {
+  return {
+    ...workspace,
+    sourceBodies: workspace.sourceBodies ?? {},
+    reviewedSourceIds: workspace.reviewedSourceIds ?? [],
+    evidenceCollectionComplete: Boolean(workspace.evidenceCollectionComplete),
+  };
+}
+
 export function loadWorkspaces(ownerId = getIdentity().id): PersonalWorkspace[] {
   if (!browser()) return [];
   const raw = window.localStorage.getItem(workspaceKey(ownerId));
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as PersonalWorkspace[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeWorkspace) : [];
   } catch {
     return [];
   }
@@ -81,10 +92,11 @@ export function loadWorkspaces(ownerId = getIdentity().id): PersonalWorkspace[] 
 
 export function saveWorkspace(workspace: PersonalWorkspace) {
   if (!browser()) return;
-  const workspaces = loadWorkspaces(workspace.ownerId);
-  const next = [workspace, ...workspaces.filter((item) => item.id !== workspace.id)];
-  window.localStorage.setItem(workspaceKey(workspace.ownerId), JSON.stringify(next));
-  window.localStorage.setItem(currentKey(workspace.ownerId), workspace.id);
+  const normalized = normalizeWorkspace(workspace);
+  const workspaces = loadWorkspaces(normalized.ownerId);
+  const next = [normalized, ...workspaces.filter((item) => item.id !== normalized.id)];
+  window.localStorage.setItem(workspaceKey(normalized.ownerId), JSON.stringify(next));
+  window.localStorage.setItem(currentKey(normalized.ownerId), normalized.id);
 }
 
 export function setCurrentWorkspace(id: string, ownerId = getIdentity().id) {
@@ -140,7 +152,7 @@ export function blankTransition(input: {
       { label: "Decisions", value: 0, note: "No evidence yet" },
       { label: "Tacit knowledge", value: 0, note: "No interview yet" },
       { label: "Ownership", value: 0, note: "Not mapped" },
-      { label: "Successor review", value: 0, note: "Not started" },
+      { label: "Successor review", value: 0, note: "Not reviewed" },
     ],
     sources: [],
     projects: [],
@@ -160,5 +172,6 @@ export function createWorkspace(transition: Transition): PersonalWorkspace {
     transition,
     sourceBodies: {},
     reviewedSourceIds: [],
+    evidenceCollectionComplete: false,
   };
 }
