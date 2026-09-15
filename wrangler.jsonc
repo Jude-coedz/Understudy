@@ -4,6 +4,7 @@
   "main": "vinext/server/fetch-handler",
   "compatibility_date": "2026-09-14",
   "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true,
   "vars": {
     "GEMINI_MODEL": "gemini-3.1-flash-lite"
   },
