@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
 import { extractFileText, SUPPORTED_UPLOAD_ACCEPT, SUPPORTED_UPLOAD_LABEL } from "@/lib/file-extraction";
+import { modelStatusCopy, type ModelStatus } from "@/lib/model-status";
 import {
   blankTransition,
   createWorkspace,
@@ -37,7 +38,6 @@ import {
 type Step = "welcome" | "role" | "evidence" | "review";
 type EvidenceMode = "paste" | "upload" | "drive";
 type FieldName = "person" | "role" | "department" | "successor" | "targetDate" | "sourceTitle" | "sourceText";
-
 type Errors = Partial<Record<FieldName, string>>;
 
 type PendingEvidence = {
@@ -163,6 +163,7 @@ export function OnboardingFlowPolished() {
   const [analysisPhase, setAnalysisPhase] = useState(-1);
   const [analysisError, setAnalysisError] = useState("");
   const [usedModel, setUsedModel] = useState(false);
+  const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null);
   const [workspace, setWorkspace] = useState<PersonalWorkspace | null>(null);
   const [googleToken, setGoogleToken] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -202,6 +203,12 @@ export function OnboardingFlowPolished() {
     const parsed = new Date(`${targetDate}T12:00:00`);
     return Number.isNaN(parsed.valueOf()) ? targetDate : parsed.toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" });
   }, [targetDate]);
+
+  const reviewModelCopy = modelStatusCopy(
+    modelStatus ?? (usedModel
+      ? { state: "ok", retryable: false }
+      : { state: "fallback", reason: "request_failed", retryable: false }),
+  );
 
   function clearError(name: FieldName) {
     setErrors((current) => ({ ...current, [name]: undefined }));
@@ -349,7 +356,7 @@ export function OnboardingFlowPolished() {
         ? uploadArtifacts
         : [{ id: "single-source", title: sourceTitle.trim(), text: sourceText.trim(), provider: sourceProvider }];
 
-      const results: Array<{ result: ReconstructionResult; usedModel: boolean; evidence: PendingEvidence }> = [];
+      const results: Array<{ result: ReconstructionResult; usedModel: boolean; modelStatus?: ModelStatus; evidence: PendingEvidence }> = [];
       for (const evidence of pending) {
         const response = await fetch("/api/reconstruct", {
           method: "POST",
@@ -370,9 +377,19 @@ export function OnboardingFlowPolished() {
             },
           }),
         });
-        const payload = (await response.json()) as { result?: ReconstructionResult; usedModel?: boolean; error?: string };
+        const payload = (await response.json()) as {
+          result?: ReconstructionResult;
+          usedModel?: boolean;
+          modelStatus?: ModelStatus;
+          error?: string;
+        };
         if (!response.ok || !payload.result) throw new Error(payload.error || `Understudy could not analyse ${evidence.title}.`);
-        results.push({ result: payload.result, usedModel: Boolean(payload.usedModel), evidence });
+        results.push({
+          result: payload.result,
+          usedModel: Boolean(payload.usedModel),
+          modelStatus: payload.modelStatus,
+          evidence,
+        });
       }
 
       const first = results[0]?.result;
@@ -407,12 +424,17 @@ export function OnboardingFlowPolished() {
       saveWorkspace(nextWorkspace);
       setWorkspace(nextWorkspace);
       setExisting(nextWorkspace);
-      setUsedModel(results.every((item) => item.usedModel));
+
+      const allUsedModel = results.every((item) => item.usedModel);
+      const fallbackStatus = results.find((item) => item.modelStatus?.state === "fallback")?.modelStatus;
+      setUsedModel(allUsedModel);
+      setModelStatus(fallbackStatus ?? { state: "ok", retryable: false });
       setErrors({});
       setNotice("");
       setStep("review");
     } catch (error) {
       setAnalysisError(error instanceof Error ? error.message : "Something went wrong while analysing the evidence.");
+      setStep("evidence");
     } finally {
       window.clearInterval(interval);
       setAnalysisPhase(-1);
@@ -585,7 +607,20 @@ export function OnboardingFlowPolished() {
                 <div className="flex items-center gap-2 text-sm text-ok"><IconCheck /> First reconstruction complete</div>
                 <h1 className="mt-3 text-3xl font-semibold tracking-tight">Understudy has a starting model, not a finished handoff.</h1>
                 <p className="mt-3 text-sm leading-6 text-muted">{workspace.transition.summary}</p>
-                <div className="mt-4 rounded-lg border border-border bg-background px-3 py-3 text-xs leading-5 text-subtle">{usedModel ? "Analysed with Gemini. Review the reconstruction before treating any claim as verified knowledge." : "Gemini was unavailable, so the deterministic fallback was used. Review every finding carefully."}</div>
+                <div className={`mt-4 rounded-lg border px-4 py-3 ${modelStatus?.state === "fallback" ? "border-warning/30 bg-warning/5" : "border-border bg-background"}`}>
+                  <p className="text-sm font-medium text-foreground">{reviewModelCopy.title}</p>
+                  <p className="mt-1 text-xs leading-5 text-subtle">{reviewModelCopy.body}</p>
+                  {modelStatus?.state === "fallback" && modelStatus.retryable && reviewModelCopy.retryLabel && (
+                    <button
+                      type="button"
+                      onClick={() => void reconstruct()}
+                      disabled={analysisPhase >= 0}
+                      className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg border border-border-strong bg-card px-3 text-xs font-medium text-muted hover:bg-card-hover disabled:cursor-wait disabled:opacity-50"
+                    >
+                      <IconSpark /> {analysisPhase >= 0 ? "Retrying Gemini…" : reviewModelCopy.retryLabel}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-border bg-card p-4"><p className="text-xs text-subtle">Work mapped</p><p className="mt-2 text-2xl font-semibold">{workspace.transition.projects.length}</p></div>
