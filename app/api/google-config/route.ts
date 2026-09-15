@@ -1,22 +1,38 @@
 import { NextResponse } from "next/server";
 
-function runtimeEnv(name: string) {
-  return process.env[name]?.trim() || "";
+function clean(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 export async function GET() {
+  let bindings: Record<string, unknown> = {};
+
+  try {
+    const cloudflare = await import("cloudflare:workers");
+    bindings = (cloudflare.env || {}) as Record<string, unknown>;
+  } catch {
+    // Local Next.js validation does not run inside workerd. The process.env
+    // fallback keeps local development working while production uses bindings.
+  }
+
   const clientId =
-    runtimeEnv("GOOGLE_CLIENT_ID") ||
-    runtimeEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID");
+    clean(bindings.GOOGLE_CLIENT_ID) ||
+    clean(bindings.NEXT_PUBLIC_GOOGLE_CLIENT_ID) ||
+    clean(process.env.GOOGLE_CLIENT_ID) ||
+    clean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+
   const apiKey =
-    runtimeEnv("GOOGLE_API_KEY") ||
-    runtimeEnv("NEXT_PUBLIC_GOOGLE_API_KEY");
+    clean(bindings.GOOGLE_API_KEY) ||
+    clean(bindings.NEXT_PUBLIC_GOOGLE_API_KEY) ||
+    clean(process.env.GOOGLE_API_KEY) ||
+    clean(process.env.NEXT_PUBLIC_GOOGLE_API_KEY);
 
   return NextResponse.json(
     {
       configured: Boolean(clientId && apiKey),
       clientId,
       apiKey,
+      source: clientId && apiKey ? (Object.keys(bindings).length ? "cloudflare-bindings" : "process-env") : "missing",
     },
     {
       headers: {

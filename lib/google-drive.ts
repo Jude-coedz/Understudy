@@ -47,7 +47,7 @@ function loadScript(src: string) {
 }
 
 export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveConfig> {
-  if (cachedConfig && !force) return cachedConfig;
+  if (cachedConfig?.configured && !force) return cachedConfig;
 
   try {
     const response = await fetch("/api/google-config", {
@@ -56,24 +56,26 @@ export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveC
     });
     if (!response.ok) throw new Error("Google configuration endpoint is unavailable.");
     const payload = (await response.json()) as Partial<GoogleDriveConfig>;
-    cachedConfig = {
+    const nextConfig = {
       configured: Boolean(payload.configured && payload.clientId && payload.apiKey),
       clientId: String(payload.clientId || ""),
       apiKey: String(payload.apiKey || ""),
     };
-  } catch {
-    cachedConfig = { configured: false, clientId: "", apiKey: "" };
-  }
 
-  return cachedConfig;
+    // Cache only a valid configuration. A transient Worker/API failure should not
+    // permanently poison the rest of the browser session.
+    cachedConfig = nextConfig.configured ? nextConfig : null;
+    return nextConfig;
+  } catch {
+    cachedConfig = null;
+    return { configured: false, clientId: "", apiKey: "" };
+  }
 }
 
-// Kept synchronous for existing UI labels. The actual connection always re-checks
-// the Worker runtime config before talking to Google, so dashboard-managed values
-// do not need to be bundled into the frontend at build time.
+// UI labels are optimistic. The real connection path always performs a fresh
+// runtime configuration check and surfaces an actionable error if it is missing.
 export function googleDriveConfigured() {
-  if (cachedConfig) return cachedConfig.configured;
-  if (typeof window !== "undefined") void loadGoogleDriveConfig();
+  if (typeof window !== "undefined" && !cachedConfig) void loadGoogleDriveConfig(true);
   return true;
 }
 
@@ -81,8 +83,8 @@ export async function connectGoogleDrive(): Promise<{
   accessToken: string;
   identity: UnderstudyIdentity;
 }> {
-  const config = await loadGoogleDriveConfig();
-  if (!config.clientId) throw new Error("Google client ID is not configured on this deployment.");
+  const config = await loadGoogleDriveConfig(true);
+  if (!config.clientId) throw new Error("Google client ID is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.");
 
   await loadScript(GIS_SRC);
   if (!window.google?.accounts?.oauth2) {
@@ -139,8 +141,8 @@ async function loadPicker() {
 }
 
 export async function pickGoogleDriveFile(accessToken: string): Promise<PickerFile | null> {
-  const config = await loadGoogleDriveConfig();
-  if (!config.apiKey) throw new Error("Google Picker API key is not configured on this deployment.");
+  const config = await loadGoogleDriveConfig(true);
+  if (!config.apiKey) throw new Error("Google Picker API key is not available from the deployed Worker. Check the runtime variable in Cloudflare and retry.");
 
   await loadPicker();
   if (!window.google?.picker) throw new Error("Google Picker did not load.");
