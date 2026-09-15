@@ -11,6 +11,8 @@ export type ReconstructionInput = {
     provider: string;
     text: string;
   };
+  openGaps?: Transition["gaps"];
+  primaryQuestion?: string;
 };
 
 export type ReconstructionResult = {
@@ -21,6 +23,7 @@ export type ReconstructionResult = {
   gaps: Transition["gaps"];
   metrics: Transition["metrics"];
   readiness: number;
+  resolvedQuestions: string[];
 };
 
 type ModelReconstruction = {
@@ -42,6 +45,7 @@ type ModelReconstruction = {
     topic?: string;
     priority?: string;
   }>;
+  resolvedQuestions?: string[];
   coverage?: {
     responsibilities?: number;
     activeWork?: number;
@@ -124,6 +128,10 @@ export function fallbackReconstruction(input: ReconstructionInput): ModelReconst
         priority: "Important",
       },
     ],
+    resolvedQuestions:
+      input.source.kind === "interview" && input.primaryQuestion
+        ? [input.primaryQuestion]
+        : [],
     coverage: {
       responsibilities: lines.length >= 4 ? 66 : 44,
       activeWork: lines.length >= 5 ? 70 : 50,
@@ -173,6 +181,21 @@ export function normalizeReconstruction(
       priority: gap.priority === "Critical" ? ("Critical" as const) : ("Important" as const),
     }));
 
+  const openQuestionSet = new Set((input.openGaps ?? []).map((gap) => gap.question));
+  const modelResolved = Array.isArray(model.resolvedQuestions)
+    ? model.resolvedQuestions.filter((question): question is string =>
+        typeof question === "string" && openQuestionSet.has(question),
+      )
+    : [];
+  const resolvedQuestions = input.source.kind === "interview"
+    ? [...new Set([
+        ...(input.primaryQuestion && openQuestionSet.has(input.primaryQuestion)
+          ? [input.primaryQuestion]
+          : []),
+        ...modelResolved,
+      ])]
+    : [];
+
   const metricValues = {
     responsibilities: clamp(coverage.responsibilities ?? 50),
     activeWork: clamp(coverage.activeWork ?? 50),
@@ -182,7 +205,6 @@ export function normalizeReconstruction(
   };
 
   // Successor review is a real product event and must not be invented by the model.
-  // Until a successor-review workflow exists, that 10% remains unearned.
   const readiness = clamp(
     metricValues.responsibilities * 0.2 +
       metricValues.activeWork * 0.2 +
@@ -213,6 +235,7 @@ export function normalizeReconstruction(
     risks,
     gaps,
     readiness,
+    resolvedQuestions,
     metrics: [
       { label: "Responsibilities", value: metricValues.responsibilities, note: "Evidence-derived" },
       { label: "Active work", value: metricValues.activeWork, note: `${projects.length} work areas` },
@@ -234,6 +257,12 @@ Your job is to extract transfer-relevant structure:
 - unanswered handoff questions
 - approximate evidence coverage by category
 
+If the source is an interview answer, you may also receive OPEN_GAPS and PRIMARY_QUESTION. In that case:
+- resolvedQuestions must contain only exact question strings from OPEN_GAPS that the answer directly resolves.
+- include PRIMARY_QUESTION when the answer substantively answers it.
+- one answer may resolve multiple gaps when it genuinely supplies the missing context.
+- do not mark a gap resolved merely because it is related to the answer.
+
 Important rules:
 1. Distinguish what the source states from what still requires employee verification.
 2. Preserve decision rationale, tradeoffs, rejected approaches, dependencies, exceptions, and open work when present.
@@ -249,6 +278,7 @@ Return this shape:
   "projects": [{"name": string, "state": string, "ownership": string, "evidence": number}],
   "risks": [{"title": string, "detail": string, "severity": "High"|"Medium"}],
   "gaps": [{"question": string, "topic": string, "priority": "Critical"|"Important"}],
+  "resolvedQuestions": string[],
   "coverage": {
     "responsibilities": number,
     "activeWork": number,
