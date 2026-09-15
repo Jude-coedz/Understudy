@@ -8,6 +8,17 @@ export type UnderstudyIdentity = {
   provider: "google" | "guest";
 };
 
+export type InterviewGapDisposition =
+  | "deferred"
+  | "unknown"
+  | "ask-someone"
+  | "not-relevant";
+
+export type InterviewGapState = {
+  status: InterviewGapDisposition;
+  updatedAt: string;
+};
+
 export type PersonalWorkspace = {
   id: string;
   ownerId: string;
@@ -18,6 +29,7 @@ export type PersonalWorkspace = {
   reviewedSourceIds: string[];
   evidenceCollectionComplete: boolean;
   evidenceCollectionCompletedAt?: string;
+  interviewGapStates: Record<string, InterviewGapState>;
 };
 
 const IDENTITY_KEY = "understudy:identity:v1";
@@ -75,6 +87,7 @@ function normalizeWorkspace(workspace: PersonalWorkspace): PersonalWorkspace {
     sourceBodies: workspace.sourceBodies ?? {},
     reviewedSourceIds: workspace.reviewedSourceIds ?? [],
     evidenceCollectionComplete: Boolean(workspace.evidenceCollectionComplete),
+    interviewGapStates: workspace.interviewGapStates ?? {},
   };
 }
 
@@ -173,5 +186,6 @@ export function createWorkspace(transition: Transition): PersonalWorkspace {
     sourceBodies: {},
     reviewedSourceIds: [],
     evidenceCollectionComplete: false,
+    interviewGapStates: {},
   };
 }
