@@ -9,6 +9,7 @@ import {
   type PersonalWorkspace,
 } from "@/lib/personal-workspace";
 import type { Transition } from "@/data/v2-demo";
+import { AI_CONTEXT_SCOPES, type AIContextScope } from "@/lib/ai-context";
 import { AIContextImport } from "./ai-context-import";
 import { IconCheck, IconChevronRight } from "./icons";
 
@@ -144,11 +145,12 @@ export function AIContextPage() {
     );
   }
 
-  async function importContext({ assistant, text }: { assistant: string; text: string }) {
+  async function importContext({ assistant, scope, text }: { assistant: string; scope: AIContextScope; text: string }) {
     if (!workspace || busy) return;
     setBusy(true);
     setMessage("");
     try {
+      const scopeLabel = AI_CONTEXT_SCOPES.find((item) => item.id === scope)?.label ?? "selected context";
       const response = await fetch("/api/reconstruct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,9 +163,9 @@ export function AIContextPage() {
             targetDate: workspace.transition.targetDate,
           },
           source: {
-            title: `Recovered ${assistant} work context`,
+            title: `Recovered ${assistant} context · ${scopeLabel}`,
             text,
-            provider: assistant,
+            provider: `${assistant} · ${scopeLabel}`,
             kind: "ai-context",
           },
         }),
@@ -182,7 +184,7 @@ export function AIContextPage() {
       setWorkspace(next);
       setImportedTitle(payload.result.source.title);
       setMessage(
-        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} the recovered context. It is now part of this transition as AI-recovered evidence and evidence collection has been reopened for review.`,
+        `${payload.usedModel ? "Gemini analysed" : "Understudy imported"} the ${scopeLabel.toLowerCase()} recovery from ${assistant}. It is now AI-recovered evidence with its context boundary preserved in the source provenance.`,
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI context import failed.");
@@ -230,7 +232,7 @@ export function AIContextPage() {
             <p>• AI-recovered context is useful for rationale, rejected approaches, lessons, and tacit knowledge.</p>
             <p>• It receives lower evidentiary weight than documents and GitHub artifacts.</p>
             <p>• Ownership, commitments, stakeholders, and current-state claims remain candidates for verification.</p>
-            <p>• Adding it reopens evidence collection so the reconstruction can be reviewed again.</p>
+            <p>• The selected recovery boundary is preserved in the source provenance so reviewers know what was actually searched.</p>
           </div>
         </div>
 
