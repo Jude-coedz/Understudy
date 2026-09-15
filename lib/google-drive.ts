@@ -68,6 +68,15 @@ export async function loadGoogleDriveConfig(force = false): Promise<GoogleDriveC
   return cachedConfig;
 }
 
+// Kept synchronous for existing UI labels. The actual connection always re-checks
+// the Worker runtime config before talking to Google, so dashboard-managed values
+// do not need to be bundled into the frontend at build time.
+export function googleDriveConfigured() {
+  if (cachedConfig) return cachedConfig.configured;
+  if (typeof window !== "undefined") void loadGoogleDriveConfig();
+  return true;
+}
+
 export async function connectGoogleDrive(): Promise<{
   accessToken: string;
   identity: UnderstudyIdentity;
