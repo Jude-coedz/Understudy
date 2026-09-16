@@ -1,5 +1,5 @@
-import { LinearWorkspace } from "@/components/linear-workspace";
+import { GuidedWorkspace } from "@/components/guided-workspace";
 
 export default function WorkspacePage() {
-  return <LinearWorkspace />;
+  return <GuidedWorkspace />;
 }
