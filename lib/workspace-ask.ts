@@ -64,7 +64,6 @@ function terms(value: string) {
 function splitIntoChunks(text: string, maxChars = 1800) {
   const normalized = text.replace(/\r/g, "").trim();
   if (!normalized) return [];
-
   const paragraphs = normalized.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
   const chunks: string[] = [];
   let current = "";
@@ -75,25 +74,19 @@ function splitIntoChunks(text: string, maxChars = 1800) {
         chunks.push(current);
         current = "";
       }
-      for (let i = 0; i < paragraph.length; i += maxChars - 180) {
-        chunks.push(paragraph.slice(i, i + maxChars));
-      }
+      for (let i = 0; i < paragraph.length; i += maxChars - 180) chunks.push(paragraph.slice(i, i + maxChars));
       continue;
     }
-
     if (!current) {
       current = paragraph;
       continue;
     }
-
-    if (current.length + paragraph.length + 2 <= maxChars) {
-      current += `\n\n${paragraph}`;
-    } else {
+    if (current.length + paragraph.length + 2 <= maxChars) current += `\n\n${paragraph}`;
+    else {
       chunks.push(current);
       current = paragraph;
     }
   }
-
   if (current) chunks.push(current);
   return chunks;
 }
@@ -103,25 +96,19 @@ function scoreChunk(questionTerms: string[], title: string, text: string) {
   const titleTerms = new Set(terms(title));
   const body = text.toLowerCase();
   let score = 0;
-
   for (const term of questionTerms) {
     if (titleTerms.has(term)) score += 5;
     const matches = body.match(new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"));
     score += Math.min(matches?.length ?? 0, 5);
   }
-
   return score;
 }
 
 function excerptOf(text: string, questionTerms: string[]) {
   const compact = text.replace(/\s+/g, " ").trim();
   if (compact.length <= 320) return compact;
-
   const lower = compact.toLowerCase();
-  const indexes = questionTerms
-    .map((term) => lower.indexOf(term))
-    .filter((index) => index >= 0)
-    .sort((a, b) => a - b);
+  const indexes = questionTerms.map((term) => lower.indexOf(term)).filter((index) => index >= 0).sort((a, b) => a - b);
   const center = indexes[0] ?? 0;
   const start = Math.max(0, center - 90);
   const end = Math.min(compact.length, start + 320);
@@ -131,7 +118,6 @@ function excerptOf(text: string, questionTerms: string[]) {
 export function retrieveWorkspaceEvidence(question: string, context: WorkspaceAskContext, limit = 8) {
   const questionTerms = terms(question);
   const chunks: EvidenceChunk[] = [];
-
   for (const source of context.sources) {
     const sourceChunks = splitIntoChunks(source.body.slice(0, 60_000));
     sourceChunks.forEach((text, index) => {
@@ -146,12 +132,9 @@ export function retrieveWorkspaceEvidence(question: string, context: WorkspaceAs
       });
     });
   }
-
   const ranked = chunks.sort((a, b) => b.score - a.score);
   const positive = ranked.filter((chunk) => chunk.score > 0);
-  const selected = positive.length ? positive.slice(0, limit) : ranked.slice(0, Math.min(limit, context.sources.length));
-
-  return selected;
+  return positive.length ? positive.slice(0, limit) : ranked.slice(0, Math.min(limit, context.sources.length));
 }
 
 export function fallbackWorkspaceAnswer(question: string, context: WorkspaceAskContext, chunks: EvidenceChunk[]): WorkspaceAskResponse {
@@ -165,7 +148,6 @@ export function fallbackWorkspaceAnswer(question: string, context: WorkspaceAskC
       usedModel: false,
     };
   }
-
   const top = chunks.slice(0, 3);
   return {
     question,
@@ -185,11 +167,12 @@ Rules:
 1. Every factual claim about the work must be supported by the supplied evidence.
 2. If the evidence is insufficient, set unknown=true and say exactly what is missing.
 3. Do not turn an inference into a fact. Qualify uncertainty explicitly.
-4. Prefer concise successor-useful answers over long summaries.
-5. Cite only source IDs that actually support the answer.
-6. Respect provenance: document and GitHub sources are primary evidence; ai-context is AI-recovered and lower confidence; interview sources are self-reported. When sources conflict, do not let AI-recovered or self-reported context silently override primary evidence.
-7. Reconstructed projects, risks, and gaps are working hypotheses rather than source-of-truth records.
-8. Do not invent dates, owners, decisions, outcomes, metrics, or stakeholders.
+4. Answer like a capable teammate explaining the handoff, not like a document parser. Lead with the direct answer, use plain language, and avoid jargon or source-language fragments unless they are necessary. If a technical term is necessary, explain what it means in the context of the handoff.
+5. Prefer a short structured answer that tells the successor what matters, what happens next, and who owns it when the evidence supports those facts.
+6. Cite only source IDs that actually support the answer.
+7. Respect provenance: document and GitHub sources are primary evidence; ai-context is AI-recovered and lower confidence; interview sources are self-reported. When sources conflict, do not let AI-recovered or self-reported context silently override primary evidence.
+8. Reconstructed projects, risks, and gaps are working hypotheses rather than source-of-truth records.
+9. Do not invent dates, owners, decisions, outcomes, metrics, or stakeholders.
 
 Return JSON only:
 {
