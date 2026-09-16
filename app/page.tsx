@@ -1,5 +1,5 @@
-import { OnboardingFlowLinear } from "@/components/onboarding-flow-linear";
+import { HandoffsPage } from "@/components/handoffs-page";
 
 export default function Page() {
-  return <OnboardingFlowLinear />;
+  return <HandoffsPage />;
 }
