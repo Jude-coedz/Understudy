@@ -1,5 +1,5 @@
-import { HandoffsPage } from "@/components/handoffs-page";
+import { HandoffsPageV2 } from "@/components/handoffs-page-v2";
 
 export default function Page() {
-  return <HandoffsPage />;
+  return <HandoffsPageV2 />;
 }
