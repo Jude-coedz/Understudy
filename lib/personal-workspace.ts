@@ -28,10 +28,12 @@ export type PersonalWorkspace = {
   updatedAt: string;
   transition: Transition;
   sourceBodies: Record<string, string>;
+  sourceReviewNotes: Record<string, string>;
   reviewedSourceIds: string[];
   evidenceCollectionComplete: boolean;
   evidenceCollectionCompletedAt?: string;
   interviewGapStates: Record<string, InterviewGapState>;
+  interviewCompletedAt?: string;
   roleEvidence?: RoleEvidenceModel;
   successorReview?: SuccessorReview;
 };
@@ -91,9 +93,11 @@ function normalizeWorkspace(workspace: PersonalWorkspace): PersonalWorkspace {
   return {
     ...workspace,
     sourceBodies: workspace.sourceBodies ?? {},
+    sourceReviewNotes: workspace.sourceReviewNotes ?? {},
     reviewedSourceIds: workspace.reviewedSourceIds ?? [],
     evidenceCollectionComplete: Boolean(workspace.evidenceCollectionComplete),
     interviewGapStates: workspace.interviewGapStates ?? {},
+    interviewCompletedAt: workspace.interviewCompletedAt,
     roleEvidence: workspace.roleEvidence,
     successorReview: workspace.successorReview,
   };
@@ -193,6 +197,7 @@ export function createWorkspace(transition: Transition): PersonalWorkspace {
     updatedAt: now,
     transition,
     sourceBodies: {},
+    sourceReviewNotes: {},
     reviewedSourceIds: [],
     evidenceCollectionComplete: false,
     interviewGapStates: {},
