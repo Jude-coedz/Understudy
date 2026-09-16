@@ -11,52 +11,39 @@ export function workspaceQuestionSuggestions(workspace: PersonalWorkspace, limit
   const { transition, roleEvidence } = workspace;
   const evidenceSources = transition.sources.filter((source) => source.kind !== "interview");
 
-  if (evidenceSources.length === 1) {
-    const source = evidenceSources[0];
-    addUnique(suggestions, `What does ${source.title} establish about the work being handed over?`);
-    if (transition.projects[0]) {
-      addUnique(suggestions, `What does ${source.title} say about ${transition.projects[0].name}, including current state and ownership?`);
-    }
-    if (transition.gaps[0]) {
-      addUnique(suggestions, `Does ${source.title} actually answer: ${transition.gaps[0].question}`);
-    }
+  addUnique(suggestions, `How many evidence sources are in ${transition.person}'s handoff, and what are they?`);
+  addUnique(suggestions, `What are the most important things ${transition.successor} needs to know before taking over?`);
+
+  if (transition.gaps.length) {
+    addUnique(suggestions, "What is still unresolved before this handoff is complete?");
+  } else if (transition.projects.length) {
+    addUnique(suggestions, "What active work needs attention next, and who owns it?");
   }
 
-  const thinDomains = roleEvidence?.domains.filter((domain) => domain.status !== "Covered") ?? [];
-  const coveredDomains = roleEvidence?.domains.filter((domain) => domain.status === "Covered") ?? [];
-
-  for (const domain of [...thinDomains, ...coveredDomains].slice(0, 3)) {
-    addUnique(
-      suggestions,
-      `Across the evidence, what is actually supported about ${domain.name}, and which sources support it?`,
-    );
+  if (evidenceSources.length === 1) {
+    const source = evidenceSources[0];
+    addUnique(suggestions, `What does ${source.title} tell us about the work being handed over?`);
+  } else if (evidenceSources.length > 1) {
+    addUnique(suggestions, "Which files support the main responsibilities in this handoff?");
   }
 
   if (roleEvidence?.contradictions.length) {
-    const contradiction = roleEvidence.contradictions[0];
-    addUnique(suggestions, `Which sources disagree about “${contradiction.claim}”, and what does each one say?`);
-  } else if (evidenceSources.length >= 5) {
-    addUnique(suggestions, `Across these ${evidenceSources.length} sources, where do ownership or current-state claims disagree?`);
+    addUnique(suggestions, "Do any of the sources disagree with each other? Explain the disagreement in plain language.");
   }
 
-  for (const gap of transition.gaps.slice(0, 2)) {
-    addUnique(suggestions, `What evidence exists for this open question: ${gap.question}`);
+  const thinDomain = roleEvidence?.domains.find((domain) => domain.status !== "Covered");
+  if (thinDomain) {
+    addUnique(suggestions, `What is still unclear about ${thinDomain.name}, and which files should I review?`);
   }
 
-  for (const risk of transition.risks.slice(0, 2)) {
-    addUnique(suggestions, `What evidence supports the risk “${risk.title}”, and what should the successor know?`);
+  const risk = transition.risks[0];
+  if (risk) {
+    addUnique(suggestions, `What should ${transition.successor} know about the risk “${risk.title}”?`);
   }
 
-  for (const project of transition.projects.slice(0, 2)) {
-    addUnique(suggestions, `What is the latest evidence-backed state of ${project.name}, including ownership and unresolved work?`);
-  }
-
-  if (evidenceSources.length > 1) {
-    addUnique(suggestions, `What responsibilities are corroborated by more than one of the ${evidenceSources.length} sources?`);
-  }
-
-  if (!suggestions.length && evidenceSources[0]) {
-    addUnique(suggestions, `Summarize only what ${evidenceSources[0].title} proves about this handoff.`);
+  const project = transition.projects[0];
+  if (project) {
+    addUnique(suggestions, `What is the current state of ${project.name}, what happens next, and who owns it?`);
   }
 
   return suggestions.slice(0, limit);
