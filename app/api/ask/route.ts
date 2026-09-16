@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { completeJson } from "@/lib/llm";
+import { answerWorkspaceMetadata } from "@/lib/workspace-metadata-answer";
 import {
   WORKSPACE_ASK_SYSTEM,
   fallbackWorkspaceAnswer,
@@ -38,16 +39,15 @@ export async function POST(req: Request) {
   }
 
   if (!validContext(body.context)) {
-    return NextResponse.json(
-      { error: "No active Understudy workspace was supplied." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "No active Understudy workspace was supplied." }, { status: 400 });
   }
 
   const context = body.context;
+  const metadataAnswer = answerWorkspaceMetadata(question, context);
+  if (metadataAnswer) return NextResponse.json(metadataAnswer);
+
   const chunks = retrieveWorkspaceEvidence(question, context);
   const fallback = fallbackWorkspaceAnswer(question, context, chunks);
-
   if (!chunks.length) return NextResponse.json(fallback);
 
   const evidence = chunks.map((chunk, index) => ({
@@ -69,6 +69,8 @@ export async function POST(req: Request) {
     reconstructedProjects: context.transition.projects,
     reconstructedRisks: context.transition.risks,
     unresolvedGaps: context.transition.gaps,
+    sourceCount: context.sources.filter((source) => source.kind !== "interview").length,
+    sourceTitles: context.sources.filter((source) => source.kind !== "interview").map((source) => source.title),
   };
 
   const llm = await completeJson<ModelAnswer>(
@@ -92,8 +94,6 @@ export async function POST(req: Request) {
   const answer = (llm.answer ?? "").trim();
   const gap = typeof llm.gap === "string" && llm.gap.trim() ? llm.gap.trim() : null;
 
-  // If the model claims it knows the answer but cannot point to any evidence,
-  // fail closed rather than returning an uncited answer.
   if (!unknown && (!answer || !citations.length)) {
     return NextResponse.json({
       question,
