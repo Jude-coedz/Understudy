@@ -65,6 +65,7 @@ function mergeInterviewResult(workspace: PersonalWorkspace, result: Reconstructi
     ...workspace,
     updatedAt: new Date().toISOString(),
     interviewGapStates,
+    interviewCompletedAt: undefined,
     transition: {
       ...previous,
       summary: result.summary || previous.summary,
@@ -82,7 +83,7 @@ function mergeInterviewResult(workspace: PersonalWorkspace, result: Reconstructi
 
 const DISPOSITIONS: Array<{ value: InterviewGapDisposition; label: string; detail: string }> = [
   { value: "unknown", label: "I don’t know", detail: "Keep this visible as an unresolved follow-up." },
-  { value: "ask-someone", label: "Someone else knows", detail: "Assign this context to another person to resolve." },
+  { value: "ask-someone", label: "Someone else knows", detail: "Keep it visible so the team can get the answer from the right person." },
   { value: "not-relevant", label: "Not relevant", detail: "Remove this question from this handoff." },
   { value: "deferred", label: "Come back later", detail: "Move it behind the other active questions." },
 ];
@@ -128,20 +129,28 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     onWorkspaceChange({
       ...workspace,
       updatedAt: new Date().toISOString(),
+      interviewCompletedAt: undefined,
       interviewGapStates: { ...states, [current.question]: { status, updatedAt: new Date().toISOString() } },
     });
     setSelectedQuestion(nextQuestion);
     setAnswer("");
     setShowExceptions(false);
-    onMessage(status === "not-relevant" ? "Question removed as not relevant." : status === "ask-someone" ? "Marked for another person to resolve." : status === "unknown" ? "Marked as unknown and kept visible for follow-up." : "Question moved behind the other active gaps.");
+    onMessage(status === "not-relevant" ? "Question removed as not relevant." : status === "ask-someone" ? "Marked as a follow-up for someone else." : status === "unknown" ? "Kept as an unresolved follow-up. It will not disappear from the handoff." : "Moved behind the other active questions.");
   }
 
   function restoreQuestion(question: string) {
     const nextStates = { ...states };
     delete nextStates[question];
-    onWorkspaceChange({ ...workspace, updatedAt: new Date().toISOString(), interviewGapStates: nextStates });
+    onWorkspaceChange({ ...workspace, updatedAt: new Date().toISOString(), interviewCompletedAt: undefined, interviewGapStates: nextStates });
     setSelectedQuestion(question);
     setAnswer("");
+  }
+
+  function finishGapReview() {
+    if (blocking.length || focus.length) return;
+    const now = new Date().toISOString();
+    onWorkspaceChange({ ...workspace, updatedAt: now, interviewCompletedAt: now });
+    onMessage(parked.length ? `Gap review finished with ${parked.length} visible follow-up${parked.length === 1 ? "" : "s"}.` : "Gap review complete. The handoff can now move to verification.");
   }
 
   async function submitAnswer() {
@@ -177,7 +186,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
       setAnswer("");
       setSelectedQuestion("");
       setShowExceptions(false);
-      onMessage(payload.result.resolvedQuestions.length > 1 ? `Answer saved. It resolved ${payload.result.resolvedQuestions.length} related gaps.` : "Answer saved and the handoff was updated.");
+      onMessage(payload.result.resolvedQuestions.length > 1 ? `Answer saved. It resolved ${payload.result.resolvedQuestions.length} related gaps.` : "Answer saved. Understudy is checking what remains.");
     } catch (error) {
       onMessage(error instanceof Error ? error.message : "Interview answer failed.");
     } finally {
@@ -185,25 +194,49 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     }
   }
 
-  if (!transition.gaps.length || (!focus.length && !blocking.length)) {
-    return (
-      <motion.div initial={reducedMotion ? false : { opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl border border-ok/25 bg-ok/5 p-7 text-center">
-        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck /></span>
-        <h2 className="mt-4 text-lg font-medium">Nothing else needs an answer right now.</h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted">Understudy will not create questions just to make the interview feel complete.</p>
-      </motion.div>
-    );
-  }
-
   if (!focus.length) {
+    const hasCriticalFollowUp = blocking.length > 0;
     return (
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="text-lg font-medium">The remaining items need follow-up, not another essay.</h2>
-          <p className="mt-2 text-sm leading-6 text-muted">{blocking.length ? `${blocking.length} critical item${blocking.length === 1 ? " is" : "s are"} still unresolved.` : "The current interview queue is handled."}</p>
+      <motion.div initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+        <div className={`rounded-2xl border p-6 ${hasCriticalFollowUp ? "border-warning/30 bg-warning/5" : "border-ok/25 bg-ok/5"}`}>
+          <span className={`flex h-10 w-10 items-center justify-center rounded-full ${hasCriticalFollowUp ? "bg-warning/10 text-warning" : "bg-ok/10 text-ok"}`}><IconCheck /></span>
+          <h2 className="mt-4 text-xl font-medium tracking-tight">{hasCriticalFollowUp ? "A critical follow-up still blocks the handoff." : parked.length ? "Active questions are handled. Review the follow-ups before finishing." : "You have reached the end of the gap review."}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+            {hasCriticalFollowUp
+              ? "Choosing “I don’t know” or “Someone else knows” does not make a critical question disappear. Bring it back when the answer is available."
+              : parked.length
+                ? `These ${parked.length} item${parked.length === 1 ? "" : "s"} will stay visible in the handoff as follow-ups. They are not being treated as resolved.`
+                : "Understudy has no remaining active questions. Finish this step explicitly before moving to handoff verification."}
+          </p>
         </div>
-        {parked.length > 0 && <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{parked.map((gap) => <div key={gap.question} className="flex items-start justify-between gap-4 p-4"><div><p className="text-sm leading-6 text-muted">{gap.question}</p><p className="mt-1 text-xs text-subtle">Follow-up required</p></div><button onClick={() => restoreQuestion(gap.question)} className="shrink-0 text-xs font-medium text-accent">Bring back</button></div>)}</div>}
-      </div>
+
+        {parked.length > 0 && (
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="border-b border-border px-5 py-4"><p className="text-sm font-medium">Follow-ups that remain open</p></div>
+            <div className="divide-y divide-border">
+              {parked.map((gap) => (
+                <div key={gap.question} className="flex items-start justify-between gap-4 p-4">
+                  <div>
+                    <p className="text-sm leading-6 text-muted">{gap.question}</p>
+                    <p className="mt-1 text-xs text-subtle">{states[gap.question]?.status === "ask-someone" ? "Someone else needs to answer" : "Answer not known yet"} · {gap.priority}</p>
+                  </div>
+                  <button onClick={() => restoreQuestion(gap.question)} className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted hover:bg-background">Bring back</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!hasCriticalFollowUp && !workspace.interviewCompletedAt && (
+          <button onClick={finishGapReview} className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-medium text-white">
+            {parked.length ? `Finish gap review with ${parked.length} follow-up${parked.length === 1 ? "" : "s"}` : "Finish gap review"}
+          </button>
+        )}
+
+        {workspace.interviewCompletedAt && (
+          <div className="rounded-xl border border-ok/25 bg-ok/5 px-4 py-3 text-sm text-muted">Gap review finished. Continue to handoff verification when you are ready.</div>
+        )}
+      </motion.div>
     );
   }
 
@@ -221,10 +254,10 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
         {current && (
           <motion.div
             key={current.question}
-            initial={reducedMotion ? false : { opacity: 0, x: 18, scale: 0.992 }}
+            initial={reducedMotion ? false : { opacity: 0, x: 14, scale: 0.995 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -14, scale: 0.995 }}
-            transition={reducedMotion ? { duration: 0 } : { x: { type: "spring", stiffness: 390, damping: 34 }, opacity: { duration: 0.2 } }}
+            exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -10, scale: 0.997 }}
+            transition={reducedMotion ? { duration: 0 } : { x: { type: "spring", stiffness: 390, damping: 34 }, opacity: { duration: 0.16 } }}
             className="rounded-2xl border border-border-strong bg-card p-6 shadow-sm sm:p-7"
           >
             <div className="flex items-center gap-2 text-xs text-subtle"><span>Topic: {current.topic}</span><span>·</span><span className={current.priority === "Critical" ? "text-warning" : ""}>{current.priority}</span></div>
@@ -234,7 +267,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
             {references.length > 0 && (
               <div className="mt-5 rounded-xl border border-border bg-background p-4">
                 <p className="text-xs font-medium uppercase tracking-[0.08em] text-subtle">Why Understudy is asking</p>
-                <p className="mt-1 text-xs leading-5 text-faint">This question came from unresolved context in the role reconstruction. These are the evidence sources most directly related to it.</p>
+                <p className="mt-1 text-xs leading-5 text-faint">These are the files that directly support, or are most closely related to, the unresolved context behind this question.</p>
                 <div className="mt-3 space-y-2">
                   {references.map((reference) => (
                     <div key={reference.source.id} className="rounded-lg border border-border bg-card p-3">
