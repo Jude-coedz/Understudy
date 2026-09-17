@@ -85,7 +85,7 @@ export function AskView() {
       <div className="mx-auto max-w-2xl px-5 py-16 text-center">
         <h1 className="text-[24px] font-semibold tracking-[-0.035em]">Ask needs a workspace first.</h1>
         <p className="mt-2 text-[13px] leading-5 text-muted">Create a transition and add real evidence before asking Understudy about the work.</p>
-        <button onClick={() => window.location.assign("/")} className="mt-5 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-medium text-white">Start a transition</button>
+        <button onClick={() => window.location.assign("/new")} className="mt-5 rounded-lg bg-accent px-4 py-2.5 text-[13px] font-medium text-white">Start a transition</button>
       </div>
     );
   }
