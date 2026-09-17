@@ -1,0 +1,102 @@
+name: Apply workspace consistency audit
+
+on:
+  push:
+    branches: [ux-consistency-audit]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ux-consistency-audit
+          fetch-depth: 0
+      - name: Patch focused workspace
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('components/guided-workspace.tsx')
+          s = path.read_text()
+
+          def once(old, new, label):
+              global s
+              if old not in s:
+                  raise SystemExit(f'Missing fragment: {label}')
+              s = s.replace(old, new, 1)
+
+          once(
+              'import { HandoffNotebook } from "./handoff-notebook";',
+              'import { HandoffNotebook } from "./handoff-notebook";\nimport { EmbeddedAskPanel } from "./embedded-ask-panel";',
+              'embedded ask import',
+          )
+          once(
+              '  const [sourceQuery, setSourceQuery] = useState("");\n  const uploadRef = useRef<HTMLInputElement>(null);',
+              '  const [sourceQuery, setSourceQuery] = useState("");\n  const [showAsk, setShowAsk] = useState(false);\n  const uploadRef = useRef<HTMLInputElement>(null);',
+              'showAsk state',
+          )
+          once(
+              '  const originalSources = useMemo(() => workspace ? originalSourcesFor(workspace) : [], [workspace]);',
+              '  const originalSources = useMemo(() => workspace ? originalSourcesFor(workspace) : [], [workspace]);\n  const aiContextSources = useMemo(() => originalSources.filter((source) => source.kind === "ai-context"), [originalSources]);',
+              'AI source memory',
+          )
+          once(
+              '    setStage(next);\n    setMessage("");',
+              '    setStage(next);\n    setShowAsk(false);\n    setMessage("");',
+              'close Ask on stage navigation',
+          )
+          once(
+              '    setSourceMode("ai");\n  }',
+              '    setSourceMode("ai");\n    setMessage(`AI context from ${assistant} is saved in this handoff. Add documents, Drive files, or pasted evidence whenever you are ready; it will all be considered together when you connect the evidence.`);\n  }',
+              'AI import confirmation',
+          )
+          once(
+              '<div className="mt-6 flex justify-center gap-2"><Link href="/" className="rounded-lg border border-border px-4 py-2.5 text-sm text-muted">My handoffs</Link><Link href="/new" className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link></div>',
+              '<div className="mt-6 flex justify-center gap-2"><Link href="/handoffs" className="rounded-lg border border-border px-4 py-2.5 text-sm text-muted">My handoffs</Link><Link href="/new" className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link></div>',
+              'empty workspace handoffs link',
+          )
+          once(
+              '            <Link href="/ask" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted hover:bg-card-hover sm:inline-flex">Ask Understudy</Link>\n',
+              '',
+              'remove header Ask route jump',
+          )
+
+          sources_anchor = '{originalSources.length > 0 && !adding && <div className="mt-7 rounded-2xl border border-border bg-card p-5 shadow-sm">'
+          idx = s.find(sources_anchor)
+          if idx < 0:
+              raise SystemExit('Missing source summary block')
+          insert_after = '</div>}\n\n              {(adding || !originalSources.length)'
+          memory = '''</div>}\n\n              {aiContextSources.length > 0 && !adding && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent-soft p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-accent"><IconSpark /></span><div className="min-w-0"><p className="text-sm font-medium">AI context is included in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">{aiContextSources.length} recovered context source{aiContextSources.length === 1 ? "" : "s"} saved. Understudy will combine {aiContextSources.length === 1 ? "it" : "them"} with every document, Drive file, GitHub source, or pasted artifact you add before you connect the evidence.</p><div className="mt-2 flex flex-wrap gap-1.5">{aiContextSources.slice(0, 3).map((source) => <span key={source.id} className="rounded-full border border-accent/15 bg-card px-2 py-1 text-[11px] text-muted">{source.provider}</span>)}</div></div></motion.div>}\n\n              {(adding || !originalSources.length)'''
+          if insert_after not in s:
+              raise SystemExit('Missing source summary insertion anchor')
+          s = s.replace(insert_after, memory, 1)
+
+          accepted_old = '<div className="mt-7 flex flex-wrap justify-center gap-3"><Link href="/handoffs" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="h-11 rounded-lg border border-border px-5 text-sm font-medium text-muted">Copy handoff record</button></div></div>'
+          accepted_new = '<div className="mt-7 flex flex-wrap justify-center gap-3"><Link href="/handoffs" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link><button type="button" onClick={() => setShowAsk((value) => !value)} className="inline-flex h-11 items-center gap-2 rounded-lg border border-border px-5 text-sm font-medium text-muted"><IconSpark className="h-4 w-4" />Ask about this handoff</button><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="h-11 rounded-lg border border-border px-5 text-sm font-medium text-muted">Copy handoff record</button></div>{showAsk && <div className="mt-7 text-left"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask this completed handoff" /></div>}</div>'
+          once(accepted_old, accepted_new, 'completed handoff ask')
+
+          actions_old = '<div className="mt-6 grid gap-3 sm:grid-cols-2"><Link href="/ask" className="rounded-2xl border border-border bg-card p-5 hover:border-border-strong"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><p className="mt-3 text-sm font-medium">Ask Understudy</p><p className="mt-1 text-xs leading-5 text-subtle">Ask about a decision, owner, dependency, source, or workspace fact before the successor verifies the handoff.</p></Link><Link href="/review" className="rounded-2xl border border-accent/30 bg-accent px-5 py-5 text-white shadow-sm"><p className="text-sm font-medium">Continue to successor review</p><p className="mt-1 text-xs leading-5 text-white/75">{transition.successor} verifies the handoff with one explicit final acceptance.</p><span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">Start verification <IconChevronRight /></span></Link></div><p className="mt-3 text-xs leading-5 text-subtle">Remembered missing evidence? <Link href="/recover-ai" className="font-medium text-accent">Recover AI context</Link> or go back to Collect. New evidence will reopen the reconstruction.</p>'
+          actions_new = '<div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setShowAsk((value) => !value)} className={`rounded-2xl border p-5 text-left transition-colors ${showAsk ? "border-accent/30 bg-accent-soft" : "border-border bg-card hover:border-border-strong"}`}><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><p className="mt-3 text-sm font-medium">Ask Understudy</p><p className="mt-1 text-xs leading-5 text-subtle">Ask about a decision, owner, dependency, source, or workspace fact without leaving this handoff.</p></button><Link href="/review" className="rounded-2xl border border-accent/30 bg-accent px-5 py-5 text-white shadow-sm"><p className="text-sm font-medium">Continue to successor review</p><p className="mt-1 text-xs leading-5 text-white/75">{transition.successor} verifies the handoff with one explicit final acceptance.</p><span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">Start verification <IconChevronRight /></span></Link></div>{showAsk && <div className="mt-4"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask before the successor verifies" /></div>}<p className="mt-3 text-xs leading-5 text-subtle">Remembered missing evidence? <button type="button" onClick={() => { setShowAsk(false); setStage("sources"); setAdding(true); setSourceMode("ai"); setMessage("Add the missing AI context here. New evidence will reopen the reconstruction only after you save it."); window.scrollTo({ top: 0, left: 0, behavior: "auto" }); }} className="font-medium text-accent">Recover AI context in Collect</button> or go back to Collect.</p>'
+          once(actions_old, actions_new, 'stage four actions')
+
+          path.write_text(s)
+          PY
+      - name: Validate application
+        run: |
+          npm ci
+          npm run build
+          npx vinext build
+          npx wrangler deploy --dry-run
+      - name: Commit patches and remove helper workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/apply-consistency-audit.yml
+          git add components/guided-workspace.tsx
+          git commit -m "Keep Ask and AI context inside focused handoff flow"
+          git push origin HEAD:ux-consistency-audit
