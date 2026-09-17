@@ -1,6 +1,7 @@
 import type { ModelFailureReason, ModelStatus } from "@/lib/model-status";
 
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
+const MODEL_TIMEOUT_MS = 15_000;
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -69,6 +70,8 @@ export async function completeJsonDetailed<T>(
   }
 
   const model = runtimeModel();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
 
   try {
     const response = await fetch(
@@ -95,6 +98,7 @@ export async function completeJsonDetailed<T>(
             temperature: 0.2,
           },
         }),
+        signal: controller.signal,
       },
     );
 
@@ -129,6 +133,8 @@ export async function completeJsonDetailed<T>(
       data: null,
       status: { state: "fallback", reason: "network", retryable: true },
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -147,6 +153,8 @@ export async function extractDocumentTextWithGemini(input: {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return null;
   const model = runtimeModel();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
 
   try {
     const response = await fetch(
@@ -180,6 +188,7 @@ export async function extractDocumentTextWithGemini(input: {
             temperature: 0,
           },
         }),
+        signal: controller.signal,
       },
     );
     if (!response.ok) return null;
@@ -187,5 +196,7 @@ export async function extractDocumentTextWithGemini(input: {
     return textOf(payload) || null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

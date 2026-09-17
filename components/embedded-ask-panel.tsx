@@ -1,11 +1,17 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import type { PersonalWorkspace } from "@/lib/personal-workspace";
 import type { WorkspaceAskContext, WorkspaceAskResponse } from "@/lib/workspace-ask";
 import { workspaceQuestionSuggestions } from "@/lib/workspace-question-suggestions";
 import { IconFile, IconSpark } from "./icons";
+
+const THINKING_STATES = [
+  "Searching this handoff's evidence…",
+  "Comparing the most relevant sources…",
+  "Checking the answer against its evidence…",
+];
 
 function buildContext(current: PersonalWorkspace): WorkspaceAskContext {
   const transition = current.transition;
@@ -48,27 +54,53 @@ export function EmbeddedAskPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [answer, setAnswer] = useState<WorkspaceAskResponse | null>(null);
+  const [activeQuestion, setActiveQuestion] = useState("");
+  const [thinkingIndex, setThinkingIndex] = useState(0);
   const sourceCount = workspace.transition.sources.filter((source) => source.kind !== "interview").length;
   const suggestions = useMemo(() => workspaceQuestionSuggestions(workspace).slice(0, 3), [workspace]);
+
+  useEffect(() => {
+    if (!busy) {
+      setThinkingIndex(0);
+      return;
+    }
+    const timer = window.setInterval(
+      () => setThinkingIndex((current) => Math.min(current + 1, THINKING_STATES.length - 1)),
+      1200,
+    );
+    return () => window.clearInterval(timer);
+  }, [busy]);
 
   async function send(question: string) {
     const q = question.trim();
     if (!q || busy || !sourceCount) return;
     setBusy(true);
     setError("");
+    setAnswer(null);
+    setActiveQuestion(q);
+    setThinkingIndex(0);
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, context: buildContext(workspace) }),
+        signal: controller.signal,
       });
       const payload = (await response.json()) as WorkspaceAskResponse & { error?: string };
       if (!response.ok) throw new Error(payload.error || "Understudy could not answer that question.");
       setAnswer(payload);
       setText("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Understudy could not answer that question.");
+      if (caught instanceof DOMException && caught.name === "AbortError") {
+        setError("That answer took too long. Nothing was changed. Try again, or ask a narrower question about this handoff.");
+      } else {
+        setError(caught instanceof Error ? caught.message : "Understudy could not answer that question.");
+      }
     } finally {
+      window.clearTimeout(timeout);
       setBusy(false);
     }
   }
@@ -90,20 +122,32 @@ export function EmbeddedAskPanel({
       <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
         <div>
           <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><h2 className="text-base font-medium">{heading}</h2></div>
-          <p className="mt-2 max-w-2xl text-xs leading-5 text-subtle">Ask without leaving this handoff. Answers use this workspace's evidence and cite the sources they rely on.</p>
+          <p className="mt-2 max-w-2xl text-xs leading-5 text-subtle">Ask without leaving this handoff. Answers use this workspace&apos;s evidence and cite the sources they rely on.</p>
         </div>
         {onClose && <button type="button" onClick={onClose} className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Close</button>}
       </div>
 
       <div className="p-5">
-        {error && <div className="mb-4 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</div>}
+        {error && <div className="mb-4 rounded-xl border border-danger/25 bg-danger/5 px-4 py-3 text-sm leading-6 text-danger"><p className="font-medium">Understudy could not finish that answer.</p><p className="mt-1 text-xs leading-5 text-muted">{error}</p></div>}
 
-        {!answer && suggestions.length > 0 && (
+        {busy && (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-5 rounded-xl border border-accent/20 bg-accent-soft p-4" role="status" aria-live="polite">
+            <div className="flex items-start gap-3">
+              <motion.span animate={reducedMotion ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }} className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-accent/20 border-t-accent" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{THINKING_STATES[thinkingIndex]}</p>
+                <p className="mt-1 text-xs leading-5 text-subtle">“{activeQuestion}”</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {!answer && !busy && suggestions.length > 0 && (
           <div className="mb-5">
             <p className="text-xs font-medium uppercase tracking-[0.08em] text-subtle">Useful questions for this handoff</p>
             <div className="mt-3 grid gap-2">
               {suggestions.map((suggestion) => (
-                <button key={suggestion} type="button" disabled={busy} onClick={() => void send(suggestion)} className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm leading-6 text-muted transition-colors hover:bg-card-hover disabled:opacity-50">{suggestion}</button>
+                <button key={suggestion} type="button" onClick={() => void send(suggestion)} className="rounded-xl border border-border bg-background px-4 py-3 text-left text-sm leading-6 text-muted transition-colors hover:border-border-strong hover:bg-card-hover">{suggestion}</button>
               ))}
             </div>
           </div>
@@ -120,12 +164,12 @@ export function EmbeddedAskPanel({
               )}
             </div>
             {answer.citations.length > 0 && <div><p className="text-xs font-medium text-subtle">Evidence used</p><div className="mt-2 space-y-2">{answer.citations.map((citation) => <div key={`${citation.sourceId}-${citation.excerpt}`} className="flex gap-3 rounded-xl border border-border bg-background p-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0"><p className="truncate text-sm font-medium">{citation.title}</p><p className="mt-1 text-xs leading-5 text-subtle">{citation.excerpt}</p></div></div>)}</div></div>}
-            <button type="button" onClick={() => setAnswer(null)} className="text-xs font-medium text-accent">Ask another question</button>
+            <button type="button" onClick={() => { setAnswer(null); setActiveQuestion(""); }} className="text-xs font-medium text-accent">Ask another question</button>
           </div>
         )}
 
         <textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={onKey} rows={3} disabled={!sourceCount || busy} placeholder={sourceCount ? "Ask about an owner, decision, risk, dependency, project, or anything in this handoff…" : "Add evidence before asking a question."} className="w-full resize-none rounded-xl border border-border bg-background px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-faint disabled:opacity-50" />
-        <div className="mt-2 flex items-center justify-between gap-3"><p className="text-[11px] text-faint">{sourceCount} evidence source{sourceCount === 1 ? "" : "s"} available · Enter to send</p><button type="button" disabled={busy || !text.trim() || !sourceCount} onClick={() => void send(text)} className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white disabled:opacity-40">{busy ? "Checking evidence…" : "Ask"}</button></div>
+        <div className="mt-2 flex items-center justify-between gap-3"><p className="text-[11px] text-faint">{sourceCount} evidence source{sourceCount === 1 ? "" : "s"} available · Enter to send</p><button type="button" disabled={busy || !text.trim() || !sourceCount} onClick={() => void send(text)} className="rounded-lg bg-accent px-4 py-2 text-xs font-medium text-white disabled:opacity-40">{busy ? "Working…" : "Ask"}</button></div>
       </div>
     </motion.section>
   );
