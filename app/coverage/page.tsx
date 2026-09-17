@@ -1,10 +1,5 @@
-import { CoverageView } from "@/components/coverage-view";
-import { Shell } from "@/components/shell";
+import { redirect } from "next/navigation";
 
 export default function CoveragePage() {
-  return (
-    <Shell>
-      <CoverageView />
-    </Shell>
-  );
+  redirect("/workspace");
 }

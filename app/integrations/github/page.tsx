@@ -1,10 +1,10 @@
 import { GithubEvidenceImport } from "@/components/github-evidence-import";
-import { Shell } from "@/components/shell";
+import { FocusedUtilityShell } from "@/components/focused-utility-shell";
 
 export default function GithubIntegrationPage() {
   return (
-    <Shell>
+    <FocusedUtilityShell backHref="/integrations" backLabel="Back to evidence connections">
       <GithubEvidenceImport />
-    </Shell>
+    </FocusedUtilityShell>
   );
 }

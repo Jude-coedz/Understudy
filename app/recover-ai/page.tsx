@@ -1,5 +1,5 @@
-import { AIContextPage } from "@/components/ai-context-page";
+import { redirect } from "next/navigation";
 
 export default function RecoverAIPage() {
-  return <AIContextPage />;
+  redirect("/workspace");
 }
