@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shell } from "@/components/shell";
+import { FocusedUtilityShell } from "@/components/focused-utility-shell";
 import { IconFile, IconGithub, IconPlug, IconSpark } from "@/components/icons";
 
 const integrations = [
@@ -50,12 +50,12 @@ const integrations = [
 
 export default function IntegrationsPage() {
   return (
-    <Shell>
-      <div className="mx-auto max-w-[1060px] px-5 py-8 lg:px-8 lg:py-10">
+    <FocusedUtilityShell>
+      <div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-10">
         <div className="mb-8">
-          <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Integrations</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Bring real work evidence into the handoff.</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Understudy separates working evidence paths from integrations that still need authorization or implementation. A connector is not shown as live unless it can contribute real evidence.</p>
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Evidence connections</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Bring real work into the handoff.</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Most evidence is added directly in Collect. Use this page only for a connector that needs its own setup flow.</p>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
@@ -79,12 +79,7 @@ export default function IntegrationsPage() {
             return "href" in integration ? <Link key={integration.name} href={integration.href}>{body}</Link> : <div key={integration.name}>{body}</div>;
           })}
         </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-card p-4 text-xs leading-5 text-subtle"><span className="font-medium text-foreground">Google Drive:</span> uses the narrow <span className="font-mono">drive.file</span> scope so the user explicitly chooses which files Understudy can read.</div>
-          <div className="rounded-xl border border-border bg-card p-4 text-xs leading-5 text-subtle"><span className="font-medium text-foreground">GitHub:</span> Step 11 intentionally starts with public repositories. Private repository access will require a proper GitHub App/OAuth permission model, not personal access tokens pasted into Understudy.</div>
-        </div>
       </div>
-    </Shell>
+    </FocusedUtilityShell>
   );
 }
