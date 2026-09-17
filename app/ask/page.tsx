@@ -1,10 +1,5 @@
-import { AskView } from "@/components/ask-view";
-import { Shell } from "@/components/shell";
+import { FocusedAskPage } from "@/components/focused-ask-page";
 
 export default function AskPage() {
-  return (
-    <Shell>
-      <AskView />
-    </Shell>
-  );
+  return <FocusedAskPage />;
 }
