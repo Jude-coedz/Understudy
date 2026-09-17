@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvidenceKind, SourceItem, Transition } from "@/data/v2-demo";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
 import type { WholeRoleSynthesisResult } from "@/lib/role-evidence";
@@ -20,10 +20,13 @@ import { domainsForSource } from "@/lib/source-provenance";
 import { AdaptiveInterview } from "./adaptive-interview";
 import { CloudAccountControl } from "./cloud-account-control";
 import { SourcePreviewDialog } from "./source-preview-dialog";
+import { AIContextImport } from "./ai-context-import";
+import { HandoffNotebook } from "./handoff-notebook";
+import { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from "@/lib/ai-context";
 import { IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
 
 type Stage = "sources" | "map" | "interview" | "handoff";
-type SourceMode = "upload" | "paste" | "drive";
+type SourceMode = "upload" | "paste" | "drive" | "ai";
 type PendingEvidence = { id: string; title: string; text: string; provider: string; kind?: EvidenceKind };
 type ReadingFiles = { current: number; total: number; name: string } | null;
 type AnalysisProgress = { current: number; total: number; name: string; phase: number } | null;
@@ -171,11 +174,6 @@ export function GuidedWorkspace() {
     return () => window.removeEventListener("understudy:cloud-hydrated", refresh);
   }, []);
 
-  useLayoutEffect(() => {
-    if (typeof window === "undefined") return;
-    window.history.scrollRestoration = "manual";
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-  }, [stage]);
 
   const transition = workspace?.transition;
   const roleSources = useMemo(() => workspace ? roleSourcesFor(workspace) : [], [workspace]);
@@ -217,53 +215,52 @@ export function GuidedWorkspace() {
 
   async function analyseBatch(items: PendingEvidence[]) {
     if (!workspace || !items.length || analysisProgress) return;
-    let current = workspace;
     setMessage("");
-    try {
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index];
-        setAnalysisProgress({ current: index + 1, total: items.length, name: item.title, phase: 0 });
-        const ticker = window.setInterval(() => {
-          setAnalysisProgress((progress) => progress ? { ...progress, phase: Math.min(progress.phase + 1, SOURCE_ANALYSIS_PHASES.length - 1) } : progress);
-        }, 850);
-        try {
-          const response = await fetch("/api/reconstruct", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              transition: {
-                person: current.transition.person,
-                role: current.transition.role,
-                department: current.transition.department,
-                successor: current.transition.successor,
-                targetDate: current.transition.targetDate,
-              },
-              source: {
-                title: item.title,
-                text: item.text,
-                provider: item.provider,
-                kind: item.kind ?? "document",
-              },
-            }),
-          });
-          const payload = (await response.json()) as { result?: ReconstructionResult; error?: string };
-          if (!response.ok || !payload.result) throw new Error(payload.error || `Could not analyse ${item.title}.`);
-          current = appendEvidenceResult(current, payload.result, item.text);
-        } finally {
-          window.clearInterval(ticker);
-        }
-      }
-      persist(current);
-      setQueued([]);
-      setSourceTitle("");
-      setSourceText("");
-      setAdding(false);
-      setMessage(`${items.length} source${items.length === 1 ? "" : "s"} added. Understudy kept each artifact separate. Add anything else, or connect the set when you are ready.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Understudy could not add this evidence.");
-    } finally {
-      setAnalysisProgress(null);
-    }
+    const now = new Date().toISOString();
+    const addedAt = new Date().toLocaleDateString("en", { month: "short", day: "numeric" });
+    const additions = items.map((item) => {
+      const kind = item.kind ?? "document";
+      const source: SourceItem = {
+        id: `source-${crypto.randomUUID()}`,
+        title: item.title,
+        kind,
+        provider: item.provider,
+        meta: `Added ${addedAt}`,
+        extracted: ["Ready for role synthesis"],
+        confidence: kind === "ai-context" ? "AI-recovered" : "Primary",
+      };
+      return { source, text: item.text };
+    });
+    const sourceBodies = { ...workspace.sourceBodies };
+    additions.forEach(({ source, text }) => { sourceBodies[source.id] = text; });
+    const next: PersonalWorkspace = {
+      ...workspace,
+      updatedAt: now,
+      sourceBodies,
+      reviewedSourceIds: [],
+      evidenceCollectionComplete: false,
+      evidenceCollectionCompletedAt: undefined,
+      roleEvidence: undefined,
+      interviewGapStates: {},
+      interviewCompletedAt: undefined,
+      successorReview: resetSuccessorReview(workspace),
+      transition: {
+        ...workspace.transition,
+        sources: [...workspace.transition.sources, ...additions.map(({ source }) => source)],
+        summary: "Evidence collected. Connect the current set when you are ready for Understudy to reconstruct the role.",
+        projects: [],
+        risks: [],
+        gaps: [],
+        readiness: 0,
+        status: "In progress",
+      },
+    };
+    persist(next);
+    setQueued([]);
+    setSourceTitle("");
+    setSourceText("");
+    setAdding(false);
+    setMessage(`${items.length} source${items.length === 1 ? "" : "s"} added. Understudy will reason across the whole set once when you connect the evidence.`);
   }
 
   async function queueFiles(files?: FileList | null) {
@@ -311,6 +308,18 @@ export function GuidedWorkspace() {
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Google Drive connection failed.");
     }
+  }
+
+  async function importAIContext({ assistant, scope, text }: { assistant: AIContextAssistant; scope: AIContextScope; text: string }) {
+    const scopeLabel = AI_CONTEXT_SCOPES.find((item) => item.id === scope)?.label ?? "Selected context";
+    await analyseBatch([{
+      id: `ai-${crypto.randomUUID()}`,
+      title: `Recovered ${assistant} context · ${scopeLabel}`,
+      text,
+      provider: `${assistant} · ${scopeLabel}`,
+      kind: "ai-context",
+    }]);
+    setSourceMode("ai");
   }
 
   async function synthesizeRole(base: PersonalWorkspace) {
@@ -504,7 +513,7 @@ export function GuidedWorkspace() {
             <div className="min-w-0"><p className="truncate text-sm font-medium">{transition.person} → {transition.successor}</p><p className="truncate text-xs text-subtle">{transition.role} handoff</p></div>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
+            <Link href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
             <Link href="/ask" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted hover:bg-card-hover sm:inline-flex">Ask Understudy</Link>
             <CloudAccountControl compact />
           </div>
@@ -538,14 +547,14 @@ export function GuidedWorkspace() {
 
               {originalSources.length > 0 && !adding && <div className="mt-7 rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">{originalSources.length} source{originalSources.length === 1 ? "" : "s"} in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">Opening this step does not invalidate your reconstruction. It changes only when you actually add or remove evidence.</p></div><button onClick={() => setAdding(true)} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background shadow-sm">+ Add evidence</button></div><div className="mt-4 max-h-80 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-background">{visibleSources.map((source) => <div key={source.id} className="flex items-center gap-3 px-3 py-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="text-xs text-subtle">{evidenceLabel(source)}</p></div><button onClick={() => setPreviewSourceId(source.id)} className="text-xs text-subtle">View</button><button onClick={() => removeSource(source)} className="text-xs text-faint hover:text-danger">Remove</button></div>)}</div>{originalSources.length > 6 && <button onClick={() => setShowAllSources((value) => !value)} className="mt-3 text-xs font-medium text-accent">{showAllSources ? "Show less" : `View all ${originalSources.length}`}</button>}</div>}
 
-              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "paste", "drive"] as SourceMode[]).map((mode) => <button key={mode} onClick={() => setSourceMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-medium ${sourceMode === mode ? "bg-foreground text-background" : "text-muted hover:bg-background"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : "Google Drive"}</button>)}</div><div className="p-5">
+              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} onClick={() => setSourceMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-medium ${sourceMode === mode ? "bg-foreground text-background" : "text-muted hover:bg-background"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}</div><div className="p-5">
                 {sourceMode === "upload" && <><button disabled={Boolean(readingFiles || analysisProgress)} onClick={() => uploadRef.current?.click()} className="flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border-strong bg-background px-6 text-center disabled:cursor-wait"><IconUpload className="text-muted" /><p className="mt-3 text-sm font-medium">Choose one or more work files</p><p className="mt-1 max-w-md text-xs leading-5 text-subtle">{SUPPORTED_UPLOAD_LABEL}</p></button><input ref={uploadRef} type="file" multiple accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(event) => void queueFiles(event.target.files)} /></>}
                 {readingFiles && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-soft px-4 py-3"><motion.span animate={reducedMotion ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-4 w-4 rounded-full border-2 border-accent/30 border-t-accent" /><div><p className="text-sm font-medium">Reading file {readingFiles.current} of {readingFiles.total}</p><p className="text-xs text-subtle">{readingFiles.name}</p></div></motion.div>}
                 {sourceMode === "paste" && <div><input value={sourceTitle} onChange={(event) => { setSourceTitle(event.target.value); setSourceProvider("Pasted evidence"); }} placeholder="Source title" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" /><textarea value={sourceText} onChange={(event) => { setSourceText(event.target.value); setSourceProvider("Pasted evidence"); }} rows={8} placeholder="Paste the artifact exactly as it exists…" className="mt-3 w-full rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none" /><button disabled={!sourceTitle.trim() || !sourceText.trim() || Boolean(analysisProgress)} onClick={() => void analyseBatch([{ id: crypto.randomUUID(), title: sourceTitle.trim(), text: sourceText.trim(), provider: sourceProvider }])} className="mt-3 h-10 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-35">Add this source</button></div>}
                 {sourceMode === "drive" && <div className="py-8 text-center"><p className="text-sm font-medium">Choose the exact Drive file Understudy may read</p><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-subtle">Understudy does not scan your Drive.</p><button onClick={() => void connectDrive()} className="mt-4 h-10 rounded-lg border border-border-strong px-4 text-sm font-medium text-muted">Choose Drive file</button></div>}
-                <Link href="/recover-ai" className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-background p-4 hover:border-border-strong"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><span><span className="block text-sm font-medium">Recover AI context</span><span className="mt-1 block text-xs leading-5 text-subtle">Bring in rationale or history from ChatGPT, Claude, or Gemini when it is genuinely useful.</span></span></Link>
+                {sourceMode === "ai" && <AIContextImport transition={transition} primarySourceTitles={originalSources.filter((source) => source.kind === "document" || source.kind === "github").map((source) => source.title)} knownWorkAreas={(workspace.roleEvidence?.domains ?? []).map((domain) => domain.name).slice(0, 10)} busy={false} onImport={importAIContext} />}
 
-                {queued.length > 0 && !analysisProgress && <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background"><div className="border-b border-border px-3 py-2.5 text-sm font-medium">{queued.length} file{queued.length === 1 ? "" : "s"} ready</div><div className="max-h-56 divide-y divide-border overflow-auto">{queued.map((item) => <div key={item.id} className="flex items-center gap-3 px-3 py-3"><IconFile className="h-4 w-4 text-muted" /><p className="min-w-0 flex-1 truncate text-sm text-muted">{item.title}</p><button onClick={() => setQueued((current) => current.filter((candidate) => candidate.id !== item.id))} className="text-xs text-faint">Remove</button></div>)}</div><div className="p-3"><button onClick={() => void analyseBatch(queued)} className="h-11 w-full rounded-lg bg-foreground text-sm font-medium text-background">Read and add {queued.length} source{queued.length === 1 ? "" : "s"}</button></div></div>}
+                {queued.length > 0 && !analysisProgress && <div className="mt-4 overflow-hidden rounded-xl border border-border bg-background"><div className="border-b border-border px-3 py-2.5 text-sm font-medium">{queued.length} file{queued.length === 1 ? "" : "s"} ready</div><div className="max-h-56 divide-y divide-border overflow-auto">{queued.map((item) => <div key={item.id} className="flex items-center gap-3 px-3 py-3"><IconFile className="h-4 w-4 text-muted" /><p className="min-w-0 flex-1 truncate text-sm text-muted">{item.title}</p><button onClick={() => setQueued((current) => current.filter((candidate) => candidate.id !== item.id))} className="text-xs text-faint">Remove</button></div>)}</div><div className="p-3"><button onClick={() => void analyseBatch(queued)} className="h-11 w-full rounded-lg bg-foreground text-sm font-medium text-background">Add {queued.length} source{queued.length === 1 ? "" : "s"}</button></div></div>}
 
                 {analysisProgress && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-4 overflow-hidden rounded-2xl border border-accent/20 bg-background"><div className="p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Building the evidence map</p><p className="mt-1 truncate text-xs text-subtle">{analysisProgress.name}</p></div><span className="text-xs font-medium text-accent">{analysisProgress.current}/{analysisProgress.total}</span></div><div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-3"><motion.div className="h-full rounded-full bg-accent" animate={{ width: `${Math.max(8, (analysisProgress.current / analysisProgress.total) * 100)}%` }} transition={{ type: "spring", stiffness: 180, damping: 25 }} /></div><div className="mt-5 space-y-2">{SOURCE_ANALYSIS_PHASES.map((phase, index) => <div key={phase} className={`flex items-center gap-3 text-sm ${index <= analysisProgress.phase ? "text-muted" : "text-faint"}`}><motion.span animate={index === analysisProgress.phase && !reducedMotion ? { scale: [1, 1.5, 1], opacity: [0.55, 1, 0.55] } : undefined} transition={{ repeat: Infinity, duration: 1 }} className={`h-2 w-2 rounded-full ${index < analysisProgress.phase ? "bg-ok" : index === analysisProgress.phase ? "bg-accent" : "bg-surface-3"}`} />{phase}</div>)}</div></div></motion.div>}
 
@@ -568,7 +577,7 @@ export function GuidedWorkspace() {
                 const domains = domainsForSource(workspace, source.id);
                 const original = !isClarification(source);
                 const contextOpen = contextSourceId === source.id;
-                return <div key={source.id} className="p-4"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="mt-0.5 text-xs text-subtle">{evidenceLabel(source)}{domains.length ? ` · supports ${domains.slice(0, 2).map((domain) => domain.name).join(", ")}` : ""}</p></div><button onClick={() => setPreviewSourceId(source.id)} className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted">View</button>{original && <button onClick={() => { setContextSourceId(contextOpen ? "" : source.id); setContextDraft(workspace.sourceReviewNotes[source.id] ?? ""); }} className="shrink-0 text-xs font-medium text-accent">{contextOpen ? "Close" : "Add context"}</button>}</div>{contextOpen && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="ml-12 mt-4 overflow-hidden"><div className="rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">Add context for {source.title}</p><p className="mt-1 text-xs leading-5 text-subtle">Use this only for something the file cannot say by itself: what changed, why a decision happened, an exception, or something a successor would otherwise miss.</p><textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} rows={5} placeholder={`What should the next owner know about ${source.title}?`} className="mt-3 w-full rounded-lg border border-border bg-card p-3 text-sm leading-6 outline-none" /><div className="mt-3 flex justify-end gap-2"><button onClick={() => setContextSourceId("")} className="h-9 rounded-lg border border-border px-3 text-xs text-muted">Cancel</button><button disabled={!contextDraft.trim() || contextBusy} onClick={() => void saveSourceContext(source)} className="h-9 rounded-lg bg-foreground px-3 text-xs font-medium text-background disabled:opacity-40">{contextBusy ? "Updating reconstruction…" : "Add this context"}</button></div></div></motion.div>}</div>;
+                return <div key={source.id} className="p-4"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="mt-0.5 text-xs text-subtle">{evidenceLabel(source)}{domains.length ? ` · supports ${domains.slice(0, 2).map((domain) => domain.name).join(", ")}` : ""}</p></div><button onClick={() => setPreviewSourceId(source.id)} className="shrink-0 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted">View</button>{original && <button onClick={() => { setContextSourceId(contextOpen ? "" : source.id); setContextDraft(workspace.sourceReviewNotes[source.id] ?? ""); }} className="inline-flex h-8 shrink-0 items-center rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-accent hover:bg-background">{contextOpen ? "Close" : "Add context"}</button>}</div>{contextOpen && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="ml-12 mt-4 overflow-hidden"><div className="rounded-xl border border-border bg-background p-4"><p className="text-sm font-medium">Add context for {source.title}</p><p className="mt-1 text-xs leading-5 text-subtle">Use this only for something the file cannot say by itself: what changed, why a decision happened, an exception, or something a successor would otherwise miss.</p><textarea value={contextDraft} onChange={(event) => setContextDraft(event.target.value)} rows={5} placeholder={`What should the next owner know about ${source.title}?`} className="mt-3 w-full rounded-lg border border-border bg-card p-3 text-sm leading-6 outline-none" /><div className="mt-3 flex justify-end gap-2"><button onClick={() => setContextSourceId("")} className="h-9 rounded-lg border border-border px-3 text-xs text-muted">Cancel</button><button disabled={!contextDraft.trim() || contextBusy} onClick={() => void saveSourceContext(source)} className="h-9 rounded-lg bg-foreground px-3 text-xs font-medium text-background disabled:opacity-40">{contextBusy ? "Updating reconstruction…" : "Add this context"}</button></div></div></motion.div>}</div>;
               })}{filteredRoleSources.length === 0 && <div className="p-6 text-center text-sm text-subtle">No evidence sources match “{sourceQuery}”.</div>}</div></div>
 
               <div className="mt-6 border-t border-border pt-5"><button onClick={() => setShowDetails((value) => !value)} className="text-sm font-medium text-muted">{showDetails ? "Hide supporting details" : "Show risks, contradictions, and likely missing areas"}</button>{showDetails && workspace.roleEvidence && <div className="mt-4 grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-card p-4"><p className="text-sm font-medium">Continuity risks</p><div className="mt-3 space-y-2">{transition.risks.length ? transition.risks.map((risk) => <p key={risk.title} className="text-xs leading-5 text-subtle">{risk.title}</p>) : <p className="text-xs text-subtle">No material risks identified.</p>}</div></div><div className="rounded-xl border border-border bg-card p-4"><p className="text-sm font-medium">Likely missing areas</p><div className="mt-3 space-y-2">{workspace.roleEvidence.missingAreas.length ? workspace.roleEvidence.missingAreas.map((area) => <p key={area} className="text-xs leading-5 text-subtle">{area}</p>) : <p className="text-xs text-subtle">No additional missing areas suggested.</p>}</div></div></div>}</div>
@@ -581,7 +590,7 @@ export function GuidedWorkspace() {
 
           {stage === "interview" && (
             <section className="mx-auto max-w-3xl">
-              <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fill only the gaps that matter.</h1><p className="mt-3 text-base leading-7 text-muted">Questions disappear only when they are answered or explicitly classified. Unknowns remain visible as follow-ups instead of vanishing.</p></div>
+              <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fill only the gaps that matter.</h1><p className="mt-3 text-base leading-7 text-muted">Understudy asks only about unresolved gaps found after comparing the full evidence set. It prioritizes criticality, continuity risk, and weakly supported areas. Your answers are saved into this handoff as self-reported evidence and can resolve this question or related gaps.</p></div>
               <div className="mt-7"><AdaptiveInterview workspace={workspace} onWorkspaceChange={persist} onMessage={setMessage} /></div>
               <div className="mt-7 flex items-center justify-between"><button onClick={() => go("map")} className="text-sm font-medium text-subtle">← Back to reconstruction</button>{workspace.interviewCompletedAt && <button onClick={() => go("handoff")} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white">Continue to handoff verification <IconChevronRight className="ml-1 inline" /></button>}</div>
             </section>
@@ -589,10 +598,10 @@ export function GuidedWorkspace() {
 
           {stage === "handoff" && interviewComplete && (
             <section className="mx-auto max-w-3xl">
-              {handoffAccepted ? <div className="rounded-3xl border border-ok/25 bg-card p-8 text-center shadow-sm sm:p-10"><motion.span initial={reducedMotion ? false : { scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 320, damping: 22 }} className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-6 w-6" /></motion.span><p className="mt-5 text-xs font-medium uppercase tracking-[0.12em] text-ok">Handoff complete</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em]">{transition.successor} has accepted the handoff.</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">The evidence was collected, the reconstruction was reviewed, the gap review was finished, and the successor explicitly verified the transfer.</p><div className="mt-7 flex flex-wrap justify-center gap-3"><Link href="/" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="h-11 rounded-lg border border-border px-5 text-sm font-medium text-muted">Copy handoff record</button></div></div> : <>
+              {handoffAccepted ? <div className="rounded-3xl border border-ok/25 bg-card p-8 text-center shadow-sm sm:p-10"><motion.span initial={reducedMotion ? false : { scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 320, damping: 22 }} className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-6 w-6" /></motion.span><p className="mt-5 text-xs font-medium uppercase tracking-[0.12em] text-ok">Handoff complete</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em]">{transition.successor} has accepted the handoff.</h1><p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">The evidence was collected, the reconstruction was reviewed, the gap review was finished, and the successor explicitly verified the transfer.</p><div className="mt-7 flex flex-wrap justify-center gap-3"><Link href="/handoffs" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="h-11 rounded-lg border border-border px-5 text-sm font-medium text-muted">Copy handoff record</button></div></div> : <>
                 <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Make sure the next owner can actually continue.</h1><p className="mt-3 text-base leading-7 text-muted">The handoff draft is ready. The final product event is the successor explicitly verifying what they are inheriting.</p></div>
                 <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{ownedProjects}/{transition.projects.length || 0}</p><p className="mt-1 text-xs leading-5 text-subtle">active work items have an identified owner</p></div><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{criticalGaps.length}</p><p className="mt-1 text-xs leading-5 text-subtle">critical gaps still open</p></div><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{reviewChecksDone}/5</p><p className="mt-1 text-xs leading-5 text-subtle">successor verification checks complete</p></div></div>
-                <div className="mt-6 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Handoff draft</p><p className="mt-1 text-xs text-subtle">Generated from reviewed evidence, explicit clarifications, and the gap review.</p></div><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="rounded-lg border border-border px-3 py-2 text-xs text-muted">Copy</button></div><pre className="mt-4 max-h-[430px] overflow-auto whitespace-pre-wrap rounded-xl bg-background p-4 font-sans text-sm leading-7 text-muted">{handoff}</pre></div>
+                <div className="mt-6 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Handoff draft</p><p className="mt-1 text-xs text-subtle">Generated from reviewed evidence, explicit clarifications, and the gap review.</p></div><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="rounded-lg border border-border px-3 py-2 text-xs text-muted">Copy</button></div><div className="mt-4"><HandoffNotebook markdown={handoff} /></div></div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2"><Link href="/ask" className="rounded-2xl border border-border bg-card p-5 hover:border-border-strong"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><p className="mt-3 text-sm font-medium">Ask Understudy</p><p className="mt-1 text-xs leading-5 text-subtle">Ask about a decision, owner, dependency, source, or workspace fact before the successor verifies the handoff.</p></Link><Link href="/review" className="rounded-2xl border border-accent/30 bg-accent px-5 py-5 text-white shadow-sm"><p className="text-sm font-medium">Continue to successor review</p><p className="mt-1 text-xs leading-5 text-white/75">{transition.successor} verifies the handoff with one explicit final acceptance.</p><span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">Start verification <IconChevronRight /></span></Link></div><p className="mt-3 text-xs leading-5 text-subtle">Remembered missing evidence? <Link href="/recover-ai" className="font-medium text-accent">Recover AI context</Link> or go back to Collect. New evidence will reopen the reconstruction.</p>
                 <div className="mt-5"><button onClick={() => go("interview")} className="text-sm font-medium text-subtle">← Back to gap review</button></div>
               </>}

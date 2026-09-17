@@ -160,7 +160,7 @@ export function AIContextPage() {
         </p>
         <div className="mt-5 flex justify-center gap-2">
           <Link href="/handoffs" className="inline-flex rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted">My handoffs</Link>
-          <Link href="/" className="inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link>
+          <Link href="/new" className="inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link>
         </div>
       </div>
     );
