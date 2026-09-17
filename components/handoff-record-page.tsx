@@ -39,7 +39,8 @@ export function HandoffRecordPage() {
   }
 
   const transition = workspace.transition;
-  const accepted = workspace.successorReview?.status === "accepted";
+  const review = workspace.successorReview;
+  const accepted = review?.status === "accepted";
   const evidence = transition.sources.filter((source) => source.kind !== "interview");
 
   return (
@@ -62,7 +63,7 @@ export function HandoffRecordPage() {
         </div>
 
         <AnimatePresence initial={false}>
-          {showAsk && <motion.div initial={reducedMotion ? false : { opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0 }} className="mt-6 overflow-hidden"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask this completed handoff" /></motion.div>}
+          {showAsk && <motion.div initial={reducedMotion ? false : { opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0 }} className="mt-6 overflow-hidden"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask this handoff" /></motion.div>}
         </AnimatePresence>
 
         <section className="mt-7 rounded-2xl border border-border bg-card p-5 shadow-sm"><p className="text-sm font-medium">Role overview</p><p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-muted">{transition.summary}</p></section>
@@ -74,9 +75,16 @@ export function HandoffRecordPage() {
 
         <section className="mt-5 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><p className="text-sm font-medium">Evidence set</p><span className="text-xs text-subtle">{evidence.length} source{evidence.length === 1 ? "" : "s"}</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{evidence.slice(0, 12).map((source) => <div key={source.id} className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5"><IconFile className="h-4 w-4 shrink-0 text-muted" /><p className="min-w-0 truncate text-xs text-muted">{source.title}</p></div>)}</div>{evidence.length > 12 && <p className="mt-3 text-xs text-subtle">+ {evidence.length - 12} more sources retained in the workspace.</p>}</section>
 
-        <section className="mt-5 rounded-2xl border border-border bg-card p-5"><p className="text-sm font-medium">Open follow-ups</p><div className="mt-3 space-y-2">{followups.length ? followups.map((gap) => <p key={gap.question} className="text-sm leading-6 text-muted">• {gap.question}</p>) : <p className="text-sm text-subtle">No open follow-ups.</p>}</div></section>
+        <section className="mt-5 rounded-2xl border border-border bg-card p-5"><p className="text-sm font-medium">Open follow-ups</p><div className="mt-3 space-y-2">{followups.length ? followups.map((gap) => <div key={gap.question} className="rounded-lg bg-background px-3 py-2.5"><p className="text-sm leading-6 text-muted">{gap.question}</p><p className="mt-0.5 text-[11px] text-faint">{gap.topic} · {gap.priority}</p></div>) : <p className="text-sm text-subtle">No open follow-ups.</p>}</div></section>
 
-        {workspace.successorReview && <section className="mt-5 rounded-2xl border border-border bg-card p-5"><p className="text-sm font-medium">Successor verification</p><p className="mt-2 text-sm leading-6 text-muted">Status: {workspace.successorReview.status === "accepted" ? "Accepted" : workspace.successorReview.status === "changes-requested" ? "Changes requested" : "Pending"}</p>{workspace.successorReview.acceptedAt && <p className="mt-1 text-xs text-subtle">Accepted {new Date(workspace.successorReview.acceptedAt).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}</p>}{workspace.successorReview.notes && <p className="mt-3 rounded-lg bg-background p-3 text-sm leading-6 text-muted">{workspace.successorReview.notes}</p>}</section>}
+        {review && <section className="mt-5 rounded-2xl border border-border bg-card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-medium">Successor verification</p><p className="mt-1 text-xs text-subtle">Notes and follow-ups saved during the final review stay attached to this record.</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${review.status === "accepted" ? "bg-ok/10 text-ok" : review.status === "changes-requested" ? "bg-warning/10 text-warning" : "bg-background text-subtle"}`}>{review.status === "accepted" ? "Accepted" : review.status === "changes-requested" ? "Changes requested" : "Pending"}</span></div>
+          {review.acceptedAt && <p className="mt-3 text-xs text-subtle">Accepted {new Date(review.acceptedAt).toLocaleDateString("en", { month: "short", day: "numeric", year: "numeric" })}</p>}
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-xl border border-border bg-background p-4"><p className="text-xs font-medium uppercase tracking-[0.08em] text-faint">Successor notes</p>{review.notes ? <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted">{review.notes}</p> : <p className="mt-2 text-sm text-subtle">No successor notes were saved.</p>}</div>
+            <div className="rounded-xl border border-border bg-background p-4"><p className="text-xs font-medium uppercase tracking-[0.08em] text-faint">Questions raised in review</p>{review.submittedQuestions.length ? <div className="mt-2 space-y-2">{review.submittedQuestions.map((item) => <p key={item} className="text-sm leading-6 text-muted">• {item}</p>)}</div> : <p className="mt-2 text-sm text-subtle">No additional questions were raised.</p>}</div>
+          </div>
+        </section>}
 
         <div className="mt-6 sm:hidden"><button type="button" onClick={() => setShowAsk((value) => !value)} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm font-medium text-muted"><IconSpark className="h-4 w-4" />Ask Understudy</button></div>
       </motion.main>
