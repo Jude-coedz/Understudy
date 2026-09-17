@@ -54,7 +54,8 @@ export function SuccessorReviewPanelV2() {
   }
 
   if (!workspace.interviewCompletedAt) {
-    return <div className="mx-auto max-w-2xl px-5 py-16 text-center"><p className="text-xs font-medium uppercase tracking-[0.12em] text-warning">Gap review not finished</p><h1 className="mt-2 text-2xl font-semibold">Finish Step 3 first.</h1><p className="mt-2 text-sm leading-6 text-muted">Successor verification is the final step, not a shortcut around unresolved handoff context.</p><Link href="/workspace" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">Back to gap review <IconChevronRight /></Link></div>;
+    const raisedDuringReview = (workspace.successorReview?.submittedQuestions.length ?? 0) > 0;
+    return <div className="mx-auto max-w-2xl px-5 py-16 text-center"><p className="text-xs font-medium uppercase tracking-[0.12em] text-warning">{raisedDuringReview ? "Successor follow-up needs an answer" : "Gap review not finished"}</p><h1 className="mt-2 text-2xl font-semibold">{raisedDuringReview ? "The handoff has reopened." : "Finish Step 3 first."}</h1><p className="mt-2 text-sm leading-6 text-muted">{raisedDuringReview ? "A question raised during successor verification is now a blocking continuity gap. Resolve it in the gap review, then return here to verify again." : "Successor verification is the final step, not a shortcut around unresolved handoff context."}</p><Link href="/workspace" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">{raisedDuringReview ? "Resolve the follow-up" : "Back to gap review"} <IconChevronRight /></Link></div>;
   }
 
   const current = workspace;
@@ -66,7 +67,7 @@ export function SuccessorReviewPanelV2() {
     const transitionWithGap = text
       ? {
           ...current.transition,
-          gaps: [...current.transition.gaps, { question: text, topic: "Successor review", priority: "Important" as const }]
+          gaps: [...current.transition.gaps, { question: text, topic: "Successor review", priority: "Critical" as const }]
             .filter((item, index, all) => all.findIndex((candidate) => candidate.question.toLowerCase() === item.question.toLowerCase()) === index),
         }
       : current.transition;
@@ -76,6 +77,7 @@ export function SuccessorReviewPanelV2() {
       updatedAt: new Date().toISOString(),
       transition: transitionWithMetric,
       successorReview: nextReview,
+      interviewCompletedAt: text ? undefined : current.interviewCompletedAt,
     };
     setWorkspace(next);
     saveWorkspace(next);
@@ -105,7 +107,7 @@ export function SuccessorReviewPanelV2() {
     setQuestion("");
     setNotes(next.notes);
     setNotesDirty(false);
-    setMessage("Follow-up saved. It is now part of the handoff's open questions and successor review record.");
+    setMessage("");
   }
 
   function requestChanges() {
@@ -169,9 +171,9 @@ export function SuccessorReviewPanelV2() {
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-medium">Anything still unclear?</h2>
-          <p className="mt-1 text-xs leading-5 text-subtle">Adding a follow-up saves it to this successor review and to the handoff&apos;s open questions. It also keeps the handoff open.</p>
+          <p className="mt-1 text-xs leading-5 text-subtle">Adding a follow-up saves it to this successor review and to the handoff&apos;s open questions, then reopens the gap review so it must be resolved before acceptance.</p>
           <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What do you still need to know?" className="mt-3 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" />
-          <button onClick={submitQuestion} disabled={!question.trim()} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">Add follow-up</button>
+          <button onClick={submitQuestion} disabled={!question.trim()} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">Add blocking follow-up</button>
           {review.submittedQuestions.length > 0 && <div className="mt-4 border-t border-border pt-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Saved follow-ups</p><div className="mt-2 space-y-2">{review.submittedQuestions.map((item) => <div key={item} className="rounded-lg bg-background px-3 py-2 text-xs leading-5 text-muted">{item}</div>)}</div></div>}
         </div>
 
