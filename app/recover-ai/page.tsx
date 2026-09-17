@@ -1,10 +1,5 @@
-import { AIContextPage } from "@/components/ai-context-page";
-import { FocusedUtilityShell } from "@/components/focused-utility-shell";
+import { redirect } from "next/navigation";
 
 export default function RecoverAIPage() {
-  return (
-    <FocusedUtilityShell>
-      <AIContextPage />
-    </FocusedUtilityShell>
-  );
+  redirect("/workspace");
 }
