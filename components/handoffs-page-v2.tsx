@@ -16,7 +16,6 @@ import { IconCheck, IconChevronRight, IconPlus } from "./icons";
 import { CloudAccountControl } from "./cloud-account-control";
 
 function statusFor(workspace: PersonalWorkspace) {
-  const evidence = workspace.transition.sources.filter((source) => source.kind !== "interview");
   const critical = blockingCriticalGaps(workspace.transition.gaps, workspace.interviewGapStates ?? {});
   if (!workspace.evidenceCollectionComplete || !workspace.roleEvidence) return "Collecting evidence";
   if (!workspace.reviewedSourceIds.length) return "Reviewing reconstruction";
@@ -67,7 +66,7 @@ export function HandoffsPageV2() {
       <header className="border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</span>Understudy</Link>
-          <div className="flex items-center gap-2"><Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Home</Link><CloudAccountControl compact /></div>
+          <div className="flex items-center gap-2"><Link href="/demo" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">Guided demo</Link><Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Home</Link><CloudAccountControl compact /></div>
         </div>
       </header>
 
@@ -78,7 +77,7 @@ export function HandoffsPageV2() {
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Every handoff, one clear place.</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Each person has a separate evidence set, reconstruction, gap review, and successor verification.</p>
           </div>
-          <Link href="/new" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> New handoff</Link>
+          <div className="flex flex-wrap gap-2"><Link href="/demo" className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-muted sm:hidden">See demo</Link><Link href="/new" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> New handoff</Link></div>
         </div>
 
         <div className={`mt-6 rounded-2xl border p-4 ${accountMode ? "border-ok/20 bg-ok/5" : "border-border bg-card"}`}>
@@ -130,7 +129,7 @@ export function HandoffsPageV2() {
           <div className="mt-10 rounded-2xl border border-dashed border-border-strong bg-card p-10 text-center">
             <h2 className="text-lg font-medium">No handoffs yet</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">Create a handoff for the first person whose work is changing hands.</p>
-            <Link href="/new" className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> Create first handoff</Link>
+            <div className="mt-5 flex flex-wrap justify-center gap-2"><Link href="/demo" className="inline-flex h-11 items-center rounded-lg border border-border px-4 text-sm font-medium text-muted">Watch the demo first</Link><Link href="/new" className="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> Create first handoff</Link></div>
           </div>
         )}
       </main>
