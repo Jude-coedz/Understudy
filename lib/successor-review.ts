@@ -13,6 +13,7 @@ export type SuccessorReview = {
   startedAt: string;
   updatedAt: string;
   acceptedAt?: string;
+  notesSavedAt?: string;
   checks: Record<SuccessorReviewCheckKey, boolean>;
   notes: string;
   submittedQuestions: string[];
