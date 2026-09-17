@@ -1,0 +1,178 @@
+from pathlib import Path
+import re
+
+path = Path('components/guided-workspace.tsx')
+s = path.read_text()
+
+def replace_once(old: str, new: str, label: str):
+    global s
+    if old not in s:
+        raise SystemExit(f'Missing expected fragment: {label}')
+    s = s.replace(old, new, 1)
+
+replace_once(
+    'import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";',
+    'import { useEffect, useMemo, useRef, useState } from "react";',
+    'remove useLayoutEffect import',
+)
+replace_once(
+    'import { SourcePreviewDialog } from "./source-preview-dialog";',
+    'import { SourcePreviewDialog } from "./source-preview-dialog";\nimport { AIContextImport } from "./ai-context-import";\nimport { HandoffNotebook } from "./handoff-notebook";\nimport { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from "@/lib/ai-context";',
+    'new focused imports',
+)
+replace_once(
+    'type SourceMode = "upload" | "paste" | "drive";',
+    'type SourceMode = "upload" | "paste" | "drive" | "ai";',
+    'AI source mode',
+)
+
+updated, count = re.subn(
+    r'\n  useLayoutEffect\(\(\) => \{.*?\n  \}, \[stage\]\);\n',
+    '\n',
+    s,
+    count=1,
+    flags=re.S,
+)
+if count != 1:
+    raise SystemExit('Could not remove scroll-restoration layout effect')
+s = updated
+
+new_analyse = '''  async function analyseBatch(items: PendingEvidence[]) {
+    if (!workspace || !items.length || analysisProgress) return;
+    setMessage("");
+    const now = new Date().toISOString();
+    const addedAt = new Date().toLocaleDateString("en", { month: "short", day: "numeric" });
+    const additions = items.map((item) => {
+      const kind = item.kind ?? "document";
+      const source: SourceItem = {
+        id: `source-${crypto.randomUUID()}`,
+        title: item.title,
+        kind,
+        provider: item.provider,
+        meta: `Added ${addedAt}`,
+        extracted: ["Ready for role synthesis"],
+        confidence: kind === "ai-context" ? "AI-recovered" : "Primary",
+      };
+      return { source, text: item.text };
+    });
+    const sourceBodies = { ...workspace.sourceBodies };
+    additions.forEach(({ source, text }) => { sourceBodies[source.id] = text; });
+    const next: PersonalWorkspace = {
+      ...workspace,
+      updatedAt: now,
+      sourceBodies,
+      reviewedSourceIds: [],
+      evidenceCollectionComplete: false,
+      evidenceCollectionCompletedAt: undefined,
+      roleEvidence: undefined,
+      interviewGapStates: {},
+      interviewCompletedAt: undefined,
+      successorReview: resetSuccessorReview(workspace),
+      transition: {
+        ...workspace.transition,
+        sources: [...workspace.transition.sources, ...additions.map(({ source }) => source)],
+        summary: "Evidence collected. Connect the current set when you are ready for Understudy to reconstruct the role.",
+        projects: [],
+        risks: [],
+        gaps: [],
+        readiness: 0,
+        status: "In progress",
+      },
+    };
+    persist(next);
+    setQueued([]);
+    setSourceTitle("");
+    setSourceText("");
+    setAdding(false);
+    setMessage(`${items.length} source${items.length === 1 ? "" : "s"} added. Understudy will reason across the whole set once when you connect the evidence.`);
+  }
+
+  async function queueFiles'''
+updated, count = re.subn(
+    r'  async function analyseBatch\(items: PendingEvidence\[\]\) \{.*?\n  \}\n\n  async function queueFiles',
+    new_analyse,
+    s,
+    count=1,
+    flags=re.S,
+)
+if count != 1:
+    raise SystemExit('Could not replace per-file analysis loop')
+s = updated
+
+ai_handler = '''  async function importAIContext({ assistant, scope, text }: { assistant: AIContextAssistant; scope: AIContextScope; text: string }) {
+    const scopeLabel = AI_CONTEXT_SCOPES.find((item) => item.id === scope)?.label ?? "Selected context";
+    await analyseBatch([{
+      id: `ai-${crypto.randomUUID()}`,
+      title: `Recovered ${assistant} context · ${scopeLabel}`,
+      text,
+      provider: `${assistant} · ${scopeLabel}`,
+      kind: "ai-context",
+    }]);
+    setSourceMode("ai");
+  }
+
+'''
+replace_once('  async function synthesizeRole(base: PersonalWorkspace) {', ai_handler + '  async function synthesizeRole(base: PersonalWorkspace) {', 'AI import handler')
+
+replace_once(
+    '{(["upload", "paste", "drive"] as SourceMode[]).map((mode) => <button key={mode} onClick={() => setSourceMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-medium ${sourceMode === mode ? "bg-foreground text-background" : "text-muted hover:bg-background"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : "Google Drive"}</button>)}',
+    '{(["upload", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} onClick={() => setSourceMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-medium ${sourceMode === mode ? "bg-foreground text-background" : "text-muted hover:bg-background"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}',
+    'source mode tabs',
+)
+
+replace_once(
+    '{sourceMode === "drive" && <div className="py-8 text-center"><p className="text-sm font-medium">Choose the exact Drive file Understudy may read</p><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-subtle">Understudy does not scan your Drive.</p><button onClick={() => void connectDrive()} className="mt-4 h-10 rounded-lg border border-border-strong px-4 text-sm font-medium text-muted">Choose Drive file</button></div>}\n                <Link href="/recover-ai" className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-background p-4 hover:border-border-strong"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><span><span className="block text-sm font-medium">Recover AI context</span><span className="mt-1 block text-xs leading-5 text-subtle">Bring in rationale or history from ChatGPT, Claude, or Gemini when it is genuinely useful.</span></span></Link>',
+    '{sourceMode === "drive" && <div className="py-8 text-center"><p className="text-sm font-medium">Choose the exact Drive file Understudy may read</p><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-subtle">Understudy does not scan your Drive.</p><button onClick={() => void connectDrive()} className="mt-4 h-10 rounded-lg border border-border-strong px-4 text-sm font-medium text-muted">Choose Drive file</button></div>}\n                {sourceMode === "ai" && <AIContextImport transition={transition} primarySourceTitles={originalSources.filter((source) => source.kind === "document" || source.kind === "github").map((source) => source.title)} knownWorkAreas={(workspace.roleEvidence?.domains ?? []).map((domain) => domain.name).slice(0, 10)} busy={false} onImport={importAIContext} />}',
+    'inline AI context',
+)
+
+s = s.replace('Read and add {queued.length} source', 'Add {queued.length} source', 1)
+
+replace_once(
+    'className="shrink-0 text-xs font-medium text-accent">{contextOpen ? "Close" : "Add context"}</button>',
+    'className="inline-flex h-8 shrink-0 items-center rounded-lg border border-border bg-card px-2.5 text-xs font-medium text-accent hover:bg-background">{contextOpen ? "Close" : "Add context"}</button>',
+    'aligned Add context button',
+)
+
+replace_once(
+    '<div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fill only the gaps that matter.</h1><p className="mt-3 text-base leading-7 text-muted">Questions disappear only when they are answered or explicitly classified. Unknowns remain visible as follow-ups instead of vanishing.</p></div>',
+    '<div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fill only the gaps that matter.</h1><p className="mt-3 text-base leading-7 text-muted">Understudy asks only about unresolved gaps found after comparing the full evidence set. It prioritizes criticality, continuity risk, and weakly supported areas. Your answers are saved into this handoff as self-reported evidence and can resolve this question or related gaps.</p></div>',
+    'interview transparency copy',
+)
+
+replace_once(
+    '<pre className="mt-4 max-h-[430px] overflow-auto whitespace-pre-wrap rounded-xl bg-background p-4 font-sans text-sm leading-7 text-muted">{handoff}</pre>',
+    '<div className="mt-4"><HandoffNotebook markdown={handoff} /></div>',
+    'styled handoff notebook',
+)
+
+s = s.replace('href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>', 'href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>')
+s = s.replace('href="/" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link>', 'href="/handoffs" className="h-11 rounded-lg bg-accent px-5 py-3 text-sm font-medium text-white">Back to my handoffs</Link>')
+
+path.write_text(s)
+
+# Explicit Home escape from My Handoffs.
+path = Path('components/handoffs-page-v2.tsx')
+s = path.read_text()
+old = '<CloudAccountControl compact />'
+new = '<div className="flex items-center gap-2"><Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Home</Link><CloudAccountControl compact /></div>'
+if old not in s:
+    raise SystemExit('Missing handoffs account control')
+path.write_text(s.replace(old, new, 1))
+
+# Fix route labels now that / is the product landing page.
+path = Path('components/ask-view.tsx')
+s = path.read_text().replace('window.location.assign("/")', 'window.location.assign("/new")', 1)
+path.write_text(s)
+
+path = Path('components/ai-context-page.tsx')
+s = path.read_text().replace('<Link href="/" className="inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link>', '<Link href="/new" className="inline-flex rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white">New handoff</Link>')
+path.write_text(s)
+
+# Keep record/review navigation explicit after the landing page split.
+for filename in ['components/handoff-record-page.tsx', 'components/successor-review-page.tsx']:
+    path = Path(filename)
+    s = path.read_text()
+    s = s.replace('href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted">My handoffs</Link>', 'href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted">My handoffs</Link>')
+    s = s.replace('href="/" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted hover:bg-card-hover sm:inline-flex">My handoffs</Link>', 'href="/handoffs" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted hover:bg-card-hover sm:inline-flex">My handoffs</Link>')
+    path.write_text(s)
