@@ -24,7 +24,7 @@ import { AIContextImport } from "./ai-context-import";
 import { HandoffNotebook } from "./handoff-notebook";
 import { EmbeddedAskPanel } from "./embedded-ask-panel";
 import { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from "@/lib/ai-context";
-import { IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
+import { IconAsk, IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
 import { AnalysisOverlay } from "./analysis-overlay";
 
@@ -614,7 +614,29 @@ export function GuidedWorkspace() {
                 <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Make sure the next owner can actually continue.</h1><p className="mt-3 text-base leading-7 text-muted">The handoff draft is ready. The final product event is the successor explicitly verifying what they are inheriting.</p></div>
                 <div className="mt-7 grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{ownedProjects}/{transition.projects.length || 0}</p><p className="mt-1 text-xs leading-5 text-subtle">active work items have an identified owner</p></div><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{criticalGaps.length}</p><p className="mt-1 text-xs leading-5 text-subtle">critical gaps still open</p></div><div className="rounded-2xl border border-border bg-card p-4"><p className="text-2xl font-semibold">{reviewChecksDone}/5</p><p className="mt-1 text-xs leading-5 text-subtle">successor verification checks complete</p></div></div>
                 <div className="mt-6 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between gap-4"><div><p className="text-sm font-medium">Handoff draft</p><p className="mt-1 text-xs text-subtle">Generated from reviewed evidence, explicit clarifications, and the gap review.</p></div><button onClick={async () => { await navigator.clipboard.writeText(handoff); setMessage("Handoff copied as Markdown."); }} className="rounded-lg border border-border px-3 py-2 text-xs text-muted">Copy</button></div><div className="mt-4"><HandoffNotebook markdown={handoff} /></div></div>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => setShowAsk((value) => !value)} className={`rounded-2xl border p-5 text-left transition-colors ${showAsk ? "border-accent/30 bg-accent-soft" : "border-border bg-card hover:border-border-strong"}`}><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent"><IconSpark /></span><p className="mt-3 text-sm font-medium">Ask Understudy</p><p className="mt-1 text-xs leading-5 text-subtle">Ask about a decision, owner, dependency, source, or workspace fact without leaving this handoff.</p></button><Link href="/review" className="rounded-2xl border border-accent/30 bg-accent px-5 py-5 text-white shadow-sm"><p className="text-sm font-medium">Continue to successor review</p><p className="mt-1 text-xs leading-5 text-white/75">{transition.successor} verifies the handoff with one explicit final acceptance.</p><span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">Start verification <IconChevronRight /></span></Link></div>{showAsk && <div className="mt-4"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask before the successor verifies" /></div>}<p className="mt-3 text-xs leading-5 text-subtle">Remembered missing evidence? <button type="button" onClick={() => { setShowAsk(false); setStage("sources"); setAdding(true); setSourceMode("ai"); setMessage("Add the missing AI context here. New evidence will reopen the reconstruction only after you save it."); window.scrollTo({ top: 0, left: 0, behavior: "auto" }); }} className="font-medium text-accent">Recover AI context in Collect</button> or go back to Collect.</p>
+                <div className="mt-6 space-y-3">
+                  <button
+                    type="button"
+                    data-ui-action="secondary"
+                    onClick={() => setShowAsk((value) => !value)}
+                    className="flex w-full items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft/55 p-5 text-left"
+                  >
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-accent/20 bg-card text-accent shadow-sm"><IconAsk className="h-5 w-5" /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">Ask this handoff</span>
+                      <span className="mt-1 block text-xs leading-5 text-subtle">Interrogate the evidence before the successor accepts it: ask about a decision, owner, dependency, risk, project, or source.</span>
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-accent">{showAsk ? "Close Q&A" : "Open Q&A"}</span>
+                  </button>
+                  {showAsk && <div><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask this handoff" /></div>}
+                  <Link href="/review" data-ui-action="primary" className="flex items-center justify-between rounded-2xl border border-accent/30 bg-accent px-5 py-4 text-white shadow-sm">
+                    <span>
+                      <span className="block text-sm font-semibold">Continue to successor review</span>
+                      <span className="mt-1 block text-xs leading-5 text-white/75">{transition.successor} confirms the acceptance criteria and completes the transfer.</span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold">Start verification <IconChevronRight /></span>
+                  </Link>
+                </div><p className="mt-3 text-xs leading-5 text-subtle">Remembered missing evidence? <button type="button" onClick={() => { setShowAsk(false); setStage("sources"); setAdding(true); setSourceMode("ai"); setMessage("Add the missing AI context here. New evidence will reopen the reconstruction only after you save it."); window.scrollTo({ top: 0, left: 0, behavior: "auto" }); }} className="font-medium text-accent">Recover AI context in Collect</button> or go back to Collect.</p>
                 <div className="mt-5"><button onClick={() => go("interview")} className="text-sm font-medium text-subtle">← Back to gap review</button></div>
               </>}
             </section>
