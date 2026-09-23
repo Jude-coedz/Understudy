@@ -48,6 +48,7 @@ type Props = {
   value: string;
   onChange: (value: string) => void;
   onListeningChange?: (listening: boolean) => void;
+  onVoiceUsed?: () => void;
   disabled?: boolean;
 };
 
@@ -81,13 +82,14 @@ function StopIcon() {
   );
 }
 
-export function VoiceInput({ value, onChange, onListeningChange, disabled = false }: Props) {
+export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, disabled = false }: Props) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const restartTimerRef = useRef<number | null>(null);
   const wantsToListenRef = useRef(false);
   const fatalErrorRef = useRef(false);
   const baseTextRef = useRef("");
   const finalTranscriptRef = useRef("");
+  const voiceUsedRef = useRef(false);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -156,6 +158,7 @@ export function VoiceInput({ value, onChange, onListeningChange, disabled = fals
 
     baseTextRef.current = value;
     finalTranscriptRef.current = "";
+    voiceUsedRef.current = false;
     wantsToListenRef.current = true;
     fatalErrorRef.current = false;
     setElapsed(0);
@@ -170,6 +173,11 @@ export function VoiceInput({ value, onChange, onListeningChange, disabled = fals
         const result = event.results[index];
         const transcript = result?.[0]?.transcript?.trim() ?? "";
         if (!transcript) continue;
+
+        if (!voiceUsedRef.current) {
+          voiceUsedRef.current = true;
+          onVoiceUsed?.();
+        }
 
         if (result.isFinal) {
           finalChunk = appendTranscript(finalChunk, transcript);
