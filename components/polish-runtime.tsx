@@ -57,6 +57,59 @@ function setNativeInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+type ActionKind = "primary" | "secondary" | "ghost" | "nav" | "icon";
+
+function actionClasses(element: HTMLElement) {
+  return typeof element.className === "string" ? element.className : "";
+}
+
+function classifyAction(element: HTMLElement): ActionKind {
+  const classes = actionClasses(element);
+  const label = (element.textContent || "").trim();
+  const ariaLabel = element.getAttribute("aria-label") || "";
+  const compact = label.length <= 2 && Boolean(ariaLabel);
+
+  if (
+    compact ||
+    classes.includes("rounded-full") && (classes.includes("h-8") || classes.includes("h-9") || classes.includes("h-10")) && label.length <= 2
+  ) {
+    return "icon";
+  }
+
+  if (element.closest("nav") || element.closest("aside")) return "nav";
+
+  if (
+    classes.includes("bg-accent") ||
+    classes.includes("bg-foreground") ||
+    classes.includes("primary-action-depth") ||
+    classes.includes("text-white")
+  ) {
+    return "primary";
+  }
+
+  if (
+    classes.includes("border") ||
+    classes.includes("bg-card") ||
+    classes.includes("bg-background")
+  ) {
+    return "secondary";
+  }
+
+  return "ghost";
+}
+
+function decorateAction(element: Element) {
+  if (!(element instanceof HTMLElement)) return;
+  if (element.closest(".understudy-calendar") || element.dataset.uiAction) return;
+  element.dataset.uiAction = classifyAction(element);
+  element.querySelectorAll("svg").forEach((icon) => icon.setAttribute("data-ui-icon", "true"));
+}
+
+function decorateActions(root: ParentNode = document) {
+  root.querySelectorAll("button, a[href], [role='button']").forEach(decorateAction);
+}
+
+
 function CalendarPopover({
   picker,
   onMonth,
@@ -246,23 +299,87 @@ export function PolishRuntime() {
   }, [reducedMotion]);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    decorateActions();
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) return;
+          if (node.matches("button, a[href], [role='button']")) decorateAction(node);
+          decorateActions(node);
+        });
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    if (reducedMotion) return () => observer.disconnect();
+
+    const interactiveFromEvent = (event: Event) => {
+      const target = event.target as Element | null;
+      const interactive = target?.closest("[data-ui-action]");
+      return interactive instanceof HTMLElement ? interactive : null;
+    };
+
+    const disabled = (element: HTMLElement) =>
+      (element instanceof HTMLButtonElement && element.disabled) ||
+      element.getAttribute("aria-disabled") === "true";
+
+    const hoverIn = (event: PointerEvent) => {
+      const element = interactiveFromEvent(event);
+      if (!element || disabled(element)) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && element.contains(related)) return;
+
+      const kind = element.dataset.uiAction as ActionKind;
+      const target =
+        kind === "nav"
+          ? { x: 2.5, y: 0, scale: 1.006 }
+          : kind === "icon"
+            ? { x: 0, y: -1.5, scale: 1.045 }
+            : { x: 0, y: -1.5, scale: 1.012 };
+
+      animate(element, target, { type: "spring", stiffness: 430, damping: 30, mass: 0.65 });
+      const icon = element.querySelector("[data-ui-icon='true']");
+      if (icon instanceof SVGElement) {
+        animate(icon, { scale: 1.09, rotate: kind === "primary" ? 3 : 1.5 }, { type: "spring", stiffness: 520, damping: 28 });
+      }
+    };
+
+    const hoverOut = (event: PointerEvent) => {
+      const element = interactiveFromEvent(event);
+      if (!element) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && element.contains(related)) return;
+
+      animate(element, { x: 0, y: 0, scale: 1 }, { type: "spring", stiffness: 430, damping: 31 });
+      const icon = element.querySelector("[data-ui-icon='true']");
+      if (icon instanceof SVGElement) {
+        animate(icon, { scale: 1, rotate: 0 }, { type: "spring", stiffness: 500, damping: 30 });
+      }
+    };
 
     const press = (event: PointerEvent) => {
-      const button = (event.target as Element | null)?.closest("button");
-      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-      animate(button, { scale: 0.985 }, { duration: 0.08, ease: "easeOut" });
-    };
-    const release = (event: PointerEvent) => {
-      const button = (event.target as Element | null)?.closest("button");
-      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-      animate(button, { scale: 1 }, { type: "spring", stiffness: 520, damping: 32 });
+      const element = interactiveFromEvent(event);
+      if (!element || disabled(element)) return;
+      animate(element, { y: 0.5, scale: 0.972 }, { duration: 0.09, ease: "easeOut" });
     };
 
+    const release = (event: PointerEvent) => {
+      const element = interactiveFromEvent(event);
+      if (!element || disabled(element)) return;
+      animate(element, { y: 0, scale: 1 }, { type: "spring", stiffness: 560, damping: 31 });
+    };
+
+    document.addEventListener("pointerover", hoverIn, true);
+    document.addEventListener("pointerout", hoverOut, true);
     document.addEventListener("pointerdown", press, true);
     document.addEventListener("pointerup", release, true);
     document.addEventListener("pointercancel", release, true);
+
     return () => {
+      observer.disconnect();
+      document.removeEventListener("pointerover", hoverIn, true);
+      document.removeEventListener("pointerout", hoverOut, true);
       document.removeEventListener("pointerdown", press, true);
       document.removeEventListener("pointerup", release, true);
       document.removeEventListener("pointercancel", release, true);
