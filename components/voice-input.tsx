@@ -91,6 +91,7 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
   const finalTranscriptRef = useRef("");
   const voiceUsedRef = useRef(false);
   const [supported, setSupported] = useState<boolean | null>(null);
+  const [language, setLanguage] = useState("auto");
   const [listening, setListening] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
@@ -154,7 +155,7 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
     const recognition = new Recognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = navigator.language || "en-US";
+    recognition.lang = language === "auto" ? navigator.language || "en-US" : language;
 
     baseTextRef.current = value;
     finalTranscriptRef.current = "";
@@ -270,6 +271,24 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
         {listening ? <StopIcon /> : <MicIcon />}
         {listening ? "Stop" : "Speak answer"}
       </button>
+
+      {!listening && (
+        <label className="flex items-center gap-1.5 text-xs text-faint">
+          <span className="sr-only">Speech language</span>
+          <select
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+            disabled={disabled}
+            className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-subtle outline-none hover:border-border-strong disabled:opacity-40"
+            title="Speech language hint"
+          >
+            <option value="auto">Language: Auto</option>
+            <option value="en-NG">English (Nigeria)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="en-US">English (US)</option>
+          </select>
+        </label>
+      )}
 
       {listening && (
         <span className="flex min-w-0 items-center gap-2 text-xs text-subtle" aria-live="polite">
