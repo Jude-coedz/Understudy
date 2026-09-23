@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentWorkspace, saveWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
-import { applyReviewMetric, SUCCESSOR_REVIEW_CHECKS, type SuccessorReview } from "@/lib/successor-review";
+import { applyReviewMetric, SUCCESSOR_REVIEW_CHECKS, type SuccessorReview, type SuccessorReviewCheckKey } from "@/lib/successor-review";
 import { IconCheck, IconChevronRight } from "./icons";
 
 function reviewFor(workspace: PersonalWorkspace): SuccessorReview {
@@ -78,6 +78,7 @@ export function SuccessorReviewPanelV2() {
   const current = workspace;
   const transition = current.transition;
   const review = reviewFor(current);
+  const allChecksComplete = SUCCESSOR_REVIEW_CHECKS.every((item) => review.checks[item.key]);
 
   function persist(nextReview: SuccessorReview, extraGap?: string) {
     const text = extraGap?.trim();
@@ -99,6 +100,18 @@ export function SuccessorReviewPanelV2() {
     setWorkspace(next);
     saveWorkspace(next);
     return next;
+  }
+
+  function toggleCheck(key: SuccessorReviewCheckKey) {
+    const now = new Date().toISOString();
+    persist({
+      ...review,
+      status: "pending",
+      acceptedAt: undefined,
+      updatedAt: now,
+      checks: { ...review.checks, [key]: !review.checks[key] },
+    });
+    setMessage("");
   }
 
   function saveNotes() {
@@ -142,15 +155,19 @@ export function SuccessorReviewPanelV2() {
       setMessage(`Resolve ${criticalGaps.length} critical follow-up${criticalGaps.length === 1 ? "" : "s"} before acceptance.`);
       return;
     }
+    if (!allChecksComplete) {
+      setShowAcceptConfirm(false);
+      setMessage("Confirm all five acceptance criteria before completing the handoff.");
+      return;
+    }
     const now = new Date().toISOString();
-    const checks = Object.fromEntries(SUCCESSOR_REVIEW_CHECKS.map((item) => [item.key, true])) as SuccessorReview["checks"];
     persist({
       ...review,
       status: "accepted",
       reviewerName: transition.successor || review.reviewerName,
       notes: notes.trimEnd(),
       notesSavedAt: notes.trim() ? now : review.notesSavedAt,
-      checks,
+      checks: review.checks,
       acceptedAt: now,
       updatedAt: now,
     });
@@ -188,8 +205,33 @@ export function SuccessorReviewPanelV2() {
       {message && <div className="mt-5 rounded-xl border border-border bg-card px-4 py-3 text-sm leading-6 text-muted" role="status">{message}</div>}
 
       <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="border-b border-border bg-background/60 px-5 py-3"><p className="text-xs font-medium text-subtle">Acceptance criteria · not verified yet</p></div>
-        {SUCCESSOR_REVIEW_CHECKS.map((item, index) => <div key={item.key} className={`flex items-start gap-4 p-5 ${index ? "border-t border-border" : ""}`}><span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-strong bg-background text-xs font-semibold text-subtle">{index + 1}</span><div><p className="text-sm font-medium">{item.label}</p><p className="mt-1 text-sm leading-6 text-subtle">{item.description}</p></div><span className="ml-auto shrink-0 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium text-faint">Pending</span></div>)}
+        <div className="border-b border-border bg-background/60 px-5 py-3">
+          <p className="text-xs font-medium text-subtle">Acceptance criteria · confirm each one</p>
+          <p className="mt-1 text-[11px] leading-5 text-faint">These are successor confirmations, not AI scores. Review the handoff, then mark each statement when it is genuinely true.</p>
+        </div>
+        {SUCCESSOR_REVIEW_CHECKS.map((item, index) => {
+          const checked = review.checks[item.key];
+          return (
+            <button
+              key={item.key}
+              type="button"
+              aria-pressed={checked}
+              onClick={() => toggleCheck(item.key)}
+              className={`flex w-full items-start gap-4 p-5 text-left ${index ? "border-t border-border" : ""} ${checked ? "bg-ok/5" : "bg-card"}`}
+            >
+              <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${checked ? "border-ok/25 bg-ok text-white" : "border-border-strong bg-background text-subtle"}`}>
+                {checked ? <IconCheck className="h-3.5 w-3.5" /> : index + 1}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium">{item.label}</span>
+                <span className="mt-1 block text-sm leading-6 text-subtle">{item.description}</span>
+              </span>
+              <span className={`ml-auto shrink-0 rounded-full border px-2 py-1 text-[10px] font-medium ${checked ? "border-ok/20 bg-ok/10 text-ok" : "border-border bg-background text-faint"}`}>
+                {checked ? "Confirmed" : "Pending"}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -210,12 +252,12 @@ export function SuccessorReviewPanelV2() {
       </div>
 
       <div className="mt-6 rounded-2xl border border-border-strong bg-card p-5 sm:flex sm:items-center sm:justify-between sm:gap-5">
-        <div><p className="text-sm font-medium">Ready to accept the handoff?</p><p className="mt-1 text-xs leading-5 text-subtle">{criticalGaps.length ? `${criticalGaps.length} critical follow-up${criticalGaps.length === 1 ? " still blocks" : "s still block"} acceptance.` : notesDirty ? "Save the successor notes first, then complete the handoff." : "You will get one final confirmation before the five criteria are marked verified."}</p></div>
-        <div className="mt-4 flex shrink-0 gap-2 sm:mt-0"><button onClick={requestChanges} className="h-11 rounded-lg border border-border px-4 text-sm font-medium text-muted">Request changes</button><motion.button whileTap={reducedMotion ? undefined : { scale: 0.98 }} onClick={() => setShowAcceptConfirm(true)} disabled={Boolean(criticalGaps.length || notesDirty)} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-40">Review & accept</motion.button></div>
+        <div><p className="text-sm font-medium">Ready to accept the handoff?</p><p className="mt-1 text-xs leading-5 text-subtle">{criticalGaps.length ? `${criticalGaps.length} critical follow-up${criticalGaps.length === 1 ? " still blocks" : "s still block"} acceptance.` : notesDirty ? "Save the successor notes first, then complete the handoff." : !allChecksComplete ? "Confirm each acceptance criterion above before the final handoff acceptance." : "All five criteria are confirmed. You will get one final confirmation before the handoff is completed."}</p></div>
+        <div className="mt-4 flex shrink-0 gap-2 sm:mt-0"><button onClick={requestChanges} className="h-11 rounded-lg border border-border px-4 text-sm font-medium text-muted">Request changes</button><motion.button whileTap={reducedMotion ? undefined : { scale: 0.98 }} onClick={() => setShowAcceptConfirm(true)} disabled={Boolean(criticalGaps.length || notesDirty || !allChecksComplete)} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-40">Review & accept</motion.button></div>
       </div>
 
       <AnimatePresence>
-        {showAcceptConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowAcceptConfirm(false); }}><motion.div initial={reducedMotion ? false : { opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reducedMotion ? undefined : { opacity: 0, y: 12, scale: 0.99 }} transition={{ type: "spring", stiffness: 360, damping: 30 }} className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-xl"><p className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">Final acceptance</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Confirm the transfer?</h2><p className="mt-2 text-sm leading-6 text-muted">By accepting, {transition.successor} explicitly confirms all five criteria below. That is when the green verification ticks are created.</p><div className="mt-4 space-y-2">{SUCCESSOR_REVIEW_CHECKS.map((item) => <div key={item.key} className="flex items-start gap-2 rounded-xl bg-background px-3 py-2.5"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] text-subtle">✓</span><p className="text-xs leading-5 text-muted">{item.label}</p></div>)}</div><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={() => setShowAcceptConfirm(false)} className="h-10 rounded-lg border border-border px-4 text-sm font-medium text-muted">Not yet</button><button type="button" onClick={confirmAccept} className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white">Accept handoff</button></div></motion.div></motion.div>}
+        {showAcceptConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowAcceptConfirm(false); }}><motion.div initial={reducedMotion ? false : { opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reducedMotion ? undefined : { opacity: 0, y: 12, scale: 0.99 }} transition={{ type: "spring", stiffness: 360, damping: 30 }} className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-xl"><p className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">Final acceptance</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Confirm the transfer?</h2><p className="mt-2 text-sm leading-6 text-muted">By accepting, {transition.successor} finalizes the five criteria already confirmed above and completes the transfer.</p><div className="mt-4 space-y-2">{SUCCESSOR_REVIEW_CHECKS.map((item) => <div key={item.key} className="flex items-start gap-2 rounded-xl bg-background px-3 py-2.5"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] text-subtle">✓</span><p className="text-xs leading-5 text-muted">{item.label}</p></div>)}</div><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={() => setShowAcceptConfirm(false)} className="h-10 rounded-lg border border-border px-4 text-sm font-medium text-muted">Not yet</button><button type="button" onClick={confirmAccept} className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white">Accept handoff</button></div></motion.div></motion.div>}
       </AnimatePresence>
     </div>
   );
