@@ -88,6 +88,7 @@ function classifyAction(element: HTMLElement): ActionKind {
   }
 
   if (
+    classes.includes("liquid-action") ||
     classes.includes("border") ||
     classes.includes("bg-card") ||
     classes.includes("bg-background")
