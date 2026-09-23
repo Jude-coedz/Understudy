@@ -13,6 +13,7 @@ import {
 } from "@/lib/personal-workspace";
 import { blockingCriticalGaps } from "@/lib/interview-priority";
 import { IconCheck, IconChevronRight, IconPlus } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 import { CloudAccountControl } from "./cloud-account-control";
 
 function statusFor(workspace: PersonalWorkspace) {
@@ -65,7 +66,7 @@ export function HandoffsPageV2() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</span>Understudy</Link>
+          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2"><Link href="/demo" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">Guided demo</Link><Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Home</Link><CloudAccountControl compact /></div>
         </div>
       </header>
