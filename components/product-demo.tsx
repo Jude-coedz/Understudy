@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import type { Transition } from "@/data/v2-demo";
 import { IconAlert, IconCheck, IconChevronRight, IconFile, IconSpark } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 type DemoStep = "collect" | "reconstruct" | "gaps" | "handoff" | "verify";
 
