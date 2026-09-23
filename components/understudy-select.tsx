@@ -17,6 +17,7 @@ export function UnderstudySelect({
 }) {
   const reducedMotion = useReducedMotion();
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<"up" | "down">("down");
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +41,16 @@ export function UnderstudySelect({
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (!open && root.current) {
+            const rect = root.current.getBoundingClientRect();
+            const estimatedMenuHeight = Math.min(options.length * 48 + 20, 280);
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            setPlacement(spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow ? "up" : "down");
+          }
+          setOpen((current) => !current);
+        }}
         data-ui-action="secondary"
         className="flex h-12 w-full items-center justify-between rounded-xl border border-border bg-card px-3.5 text-left text-sm text-foreground"
       >
@@ -59,11 +69,13 @@ export function UnderstudySelect({
           <motion.div
             role="listbox"
             aria-label={label}
-            initial={reducedMotion ? false : { opacity: 0, y: -6, scale: 0.985 }}
+            initial={reducedMotion ? false : { opacity: 0, y: placement === "up" ? 6 : -6, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.99 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: placement === "up" ? 4 : -4, scale: 0.99 }}
             transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 390, damping: 32 }}
-            className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-border-strong bg-card/95 p-1.5 shadow-xl backdrop-blur-xl"
+            className={`absolute z-50 w-full overflow-hidden rounded-2xl border border-border-strong bg-card/95 p-1.5 shadow-xl backdrop-blur-xl ${
+              placement === "up" ? "bottom-full mb-2" : "top-full mt-2"
+            }`}
           >
             {options.map((option) => {
               const selected = option === value;
