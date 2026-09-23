@@ -108,6 +108,7 @@ export function VoiceInput({ value, onChange, onListeningChange, disabled = fals
       }
       recognitionRef.current?.abort();
       recognitionRef.current = null;
+      onListeningChange?.(false);
     };
   }, []);
 
@@ -161,6 +162,7 @@ export function VoiceInput({ value, onChange, onListeningChange, disabled = fals
     setError("");
 
     recognition.onresult = (event) => {
+      setError("");
       let finalChunk = "";
       let interimChunk = "";
 
