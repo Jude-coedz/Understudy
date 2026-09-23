@@ -14,7 +14,8 @@ import {
 } from "@/lib/interview-priority";
 import { relatedSourcesForGap } from "@/lib/source-provenance";
 import { IconCheck, IconFile, IconSpark } from "./icons";
-import { SourcePreviewDialog } from "./source-preview-dialog";\nimport { VoiceInput } from "./voice-input";
+import { SourcePreviewDialog } from "./source-preview-dialog";
+import { VoiceInput } from "./voice-input";
 
 type Props = {
   workspace: PersonalWorkspace;
