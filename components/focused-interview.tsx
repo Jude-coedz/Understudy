@@ -156,7 +156,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   }
 
   async function submitAnswer() {
-    if (!current || !answer.trim() || busy) return;
+    if (!current || !answer.trim() || busy || voiceListening) return;
     setBusy(true);
     onMessage("");
     try {
