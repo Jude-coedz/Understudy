@@ -158,13 +158,42 @@ export function EmbeddedAskPanel({
         {error && <div className="mb-4 rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-xs leading-5 text-muted">Technical detail: {error}</div>}
 
         {busy && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-5 overflow-hidden rounded-xl border border-accent/20 bg-accent-soft p-4" role="status" aria-live="polite">
-            <div className="flex items-start gap-3">
-              <motion.span animate={reducedMotion ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 0.9, ease: "linear" }} className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-accent/20 border-t-accent" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{THINKING_STATES[thinkingIndex]}</p>
-                <p className="mt-1 text-xs leading-5 text-subtle">“{activeQuestion}”</p>
-                <div className="mt-3 h-1 overflow-hidden rounded-full bg-accent/10"><motion.div className="h-full w-1/3 rounded-full bg-accent" animate={reducedMotion ? undefined : { x: ["-100%", "300%"] }} transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }} /></div>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mb-5 overflow-hidden rounded-2xl border border-accent/20 bg-card shadow-sm" role="status" aria-live="polite">
+            <div className="relative overflow-hidden border-b border-border px-4 py-4">
+              <div className="understudy-ambient -right-20 -top-24 h-52 w-52 opacity-30" aria-hidden />
+              <div className="relative flex items-start gap-3">
+                <motion.span
+                  animate={reducedMotion ? undefined : { rotate: [0, 7, -7, 0], scale: [1, 1.06, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-accent/20 bg-accent-soft text-accent"
+                >
+                  <IconSpark className="h-4.5 w-4.5" />
+                </motion.span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">Understudy is checking the handoff</p>
+                  <p className="mt-1 truncate text-xs leading-5 text-subtle">“{activeQuestion}”</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-medium text-subtle">{sourceCount} source{sourceCount === 1 ? "" : "s"}</span>
+              </div>
+            </div>
+            <div className="space-y-2.5 px-4 py-4">
+              {THINKING_STATES.map((state, index) => {
+                const complete = index < thinkingIndex;
+                const active = index === thinkingIndex;
+                return (
+                  <div key={state} className="flex items-center gap-3">
+                    <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-[10px] font-semibold ${complete ? "border-ok/25 bg-ok/10 text-ok" : active ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-background text-faint"}`}>
+                      {complete ? "✓" : index + 1}
+                    </span>
+                    <span className={`text-xs ${active || complete ? "text-muted" : "text-faint"}`}>{state}</span>
+                    {active && <motion.span className="ml-auto h-1.5 w-1.5 rounded-full bg-accent" animate={reducedMotion ? undefined : { opacity: [0.35, 1, 0.35], scale: [0.8, 1.3, 0.8] }} transition={{ duration: 1, repeat: Infinity }} />}
+                  </div>
+                );
+              })}
+              <div className="pt-1">
+                <div className="h-1 overflow-hidden rounded-full bg-surface-3">
+                  <motion.div className="h-full rounded-full bg-accent" animate={{ width: `${((thinkingIndex + 1) / THINKING_STATES.length) * 100}%` }} transition={{ type: "spring", stiffness: 180, damping: 24 }} />
+                </div>
               </div>
             </div>
           </motion.div>
