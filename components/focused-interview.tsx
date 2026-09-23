@@ -101,6 +101,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [usedVoice, setUsedVoice] = useState(false);
   const [showExceptions, setShowExceptions] = useState(false);
   const [previewSourceId, setPreviewSourceId] = useState("");
 
@@ -112,6 +113,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     if (!focus.some((gap) => gap.question === selectedQuestion)) {
       setSelectedQuestion(focus[0].question);
       setAnswer("");
+      setUsedVoice(false);
       setShowExceptions(false);
     }
   }, [focus, selectedQuestion]);
@@ -136,6 +138,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     });
     setSelectedQuestion(nextQuestion);
     setAnswer("");
+    setUsedVoice(false);
     setShowExceptions(false);
     onMessage(status === "not-relevant" ? "Question removed as not relevant." : status === "ask-someone" ? "Marked as a follow-up for someone else." : status === "unknown" ? "Kept as an unresolved follow-up. It will not disappear from the handoff." : "Moved behind the other active questions.");
   }
@@ -146,6 +149,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     onWorkspaceChange({ ...workspace, updatedAt: new Date().toISOString(), interviewCompletedAt: undefined, interviewGapStates: nextStates });
     setSelectedQuestion(question);
     setAnswer("");
+    setUsedVoice(false);
   }
 
   function finishGapReview() {
@@ -174,7 +178,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
           source: {
             title: `Handoff interview · ${current.topic}`,
             text: answer.trim(),
-            provider: "Understudy interview",
+            provider: usedVoice ? "Understudy interview · voice" : "Understudy interview",
             kind: "interview",
           },
           openGaps: transition.gaps,
@@ -186,6 +190,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
       const next = mergeInterviewResult(workspace, payload.result, answer.trim());
       onWorkspaceChange(next);
       setAnswer("");
+      setUsedVoice(false);
       setSelectedQuestion("");
       setShowExceptions(false);
       onMessage(payload.result.resolvedQuestions.length > 1 ? `Answer saved. It resolved ${payload.result.resolvedQuestions.length} related gaps.` : "Answer saved. Understudy is checking what remains.");
@@ -298,8 +303,14 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
                 className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
               />
               <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <VoiceInput value={answer} onChange={setAnswer} onListeningChange={setVoiceListening} disabled={busy} />
-                <span className="text-xs text-faint">Voice becomes editable text. Review it before saving.</span>
+                <VoiceInput
+                  value={answer}
+                  onChange={setAnswer}
+                  onListeningChange={setVoiceListening}
+                  onVoiceUsed={() => setUsedVoice(true)}
+                  disabled={busy}
+                />
+                <span className="text-xs text-faint">{usedVoice ? "Voice transcript captured. Review it before saving." : "Voice becomes editable text. Review it before saving."}</span>
               </div>
             </div>
 
