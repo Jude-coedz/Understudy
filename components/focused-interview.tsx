@@ -14,7 +14,7 @@ import {
 } from "@/lib/interview-priority";
 import { relatedSourcesForGap } from "@/lib/source-provenance";
 import { IconCheck, IconFile, IconSpark } from "./icons";
-import { SourcePreviewDialog } from "./source-preview-dialog";
+import { SourcePreviewDialog } from "./source-preview-dialog";\nimport { VoiceInput } from "./voice-input";
 
 type Props = {
   workspace: PersonalWorkspace;
@@ -286,7 +286,20 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
               </div>
             )}
 
-            <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} rows={7} autoFocus placeholder="Explain what they need to know…" className="mt-6 w-full resize-none rounded-xl border border-border bg-background p-4 text-sm leading-6 outline-none placeholder:text-faint focus:border-border-strong" />
+            <div className="mt-6 overflow-hidden rounded-xl border border-border bg-background transition-colors focus-within:border-border-strong">
+              <textarea
+                value={answer}
+                onChange={(event) => setAnswer(event.target.value)}
+                rows={7}
+                autoFocus
+                placeholder="Explain what they need to know…"
+                className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
+              />
+              <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <VoiceInput value={answer} onChange={setAnswer} disabled={busy} />
+                <span className="text-xs text-faint">Voice becomes editable text. Review it before saving.</span>
+              </div>
+            </div>
 
             <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
