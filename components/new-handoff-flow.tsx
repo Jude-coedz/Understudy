@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { blankTransition, createWorkspace, saveWorkspace } from "@/lib/personal-workspace";
 import { IconChevronRight } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
+import { UnderstudySelect } from "./understudy-select";
 
 type Errors = Partial<Record<"person" | "role" | "department" | "successor" | "targetDate", string>>;
 
@@ -83,12 +84,14 @@ export function NewHandoffFlow() {
             {field("successor", "Next owner", successor, setSuccessor, "e.g. Priya or Product team")}
             <label className="block">
               <span className="text-sm font-medium">Transition type</span>
-              <select value={type} onChange={(event) => setType(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-border bg-card px-3.5 text-sm text-muted outline-none">
-                <option>Role transition</option>
-                <option>Departure</option>
-                <option>Leave coverage</option>
-                <option>Team reallocation</option>
-              </select>
+              <div className="mt-2">
+                <UnderstudySelect
+                  value={type}
+                  options={["Role transition", "Departure", "Leave coverage", "Team reallocation"]}
+                  onChange={setType}
+                  label="Transition type"
+                />
+              </div>
             </label>
             <label className="block">
               <span className="text-sm font-medium">Target handoff date</span>
