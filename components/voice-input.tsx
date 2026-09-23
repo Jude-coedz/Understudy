@@ -47,6 +47,7 @@ declare global {
 type Props = {
   value: string;
   onChange: (value: string) => void;
+  onListeningChange?: (listening: boolean) => void;
   disabled?: boolean;
 };
 
@@ -80,8 +81,11 @@ function StopIcon() {
   );
 }
 
-export function VoiceInput({ value, onChange, disabled = false }: Props) {
+export function VoiceInput({ value, onChange, onListeningChange, disabled = false }: Props) {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const restartTimerRef = useRef<number | null>(null);
+  const wantsToListenRef = useRef(false);
+  const fatalErrorRef = useRef(false);
   const baseTextRef = useRef("");
   const finalTranscriptRef = useRef("");
   const [supported, setSupported] = useState<boolean | null>(null);
@@ -89,9 +93,19 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState("");
 
+  function publishListening(next: boolean) {
+    setListening(next);
+    onListeningChange?.(next);
+  }
+
   useEffect(() => {
     setSupported(Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
+
     return () => {
+      wantsToListenRef.current = false;
+      if (restartTimerRef.current !== null) {
+        window.clearTimeout(restartTimerRef.current);
+      }
       recognitionRef.current?.abort();
       recognitionRef.current = null;
     };
@@ -104,8 +118,25 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
   }, [listening]);
 
   function stop() {
+    wantsToListenRef.current = false;
+    if (restartTimerRef.current !== null) {
+      window.clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
     recognitionRef.current?.stop();
-    setListening(false);
+    publishListening(false);
+  }
+
+  function startRecognition(recognition: SpeechRecognitionLike) {
+    try {
+      recognition.start();
+      publishListening(true);
+    } catch {
+      wantsToListenRef.current = false;
+      recognitionRef.current = null;
+      publishListening(false);
+      setError("Voice transcription could not start. You can keep typing or try again.");
+    }
   }
 
   function start() {
@@ -124,6 +155,8 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
 
     baseTextRef.current = value;
     finalTranscriptRef.current = "";
+    wantsToListenRef.current = true;
+    fatalErrorRef.current = false;
     setElapsed(0);
     setError("");
 
@@ -136,8 +169,11 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
         const transcript = result?.[0]?.transcript?.trim() ?? "";
         if (!transcript) continue;
 
-        if (result.isFinal) finalChunk = appendTranscript(finalChunk, transcript);
-        else interimChunk = appendTranscript(interimChunk, transcript);
+        if (result.isFinal) {
+          finalChunk = appendTranscript(finalChunk, transcript);
+        } else {
+          interimChunk = appendTranscript(interimChunk, transcript);
+        }
       }
 
       if (finalChunk) {
@@ -151,34 +187,49 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
     recognition.onerror = (event) => {
       if (event.error === "aborted") return;
 
+      const fatal =
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed" ||
+        event.error === "audio-capture";
+
+      fatalErrorRef.current = fatal;
+      if (fatal) wantsToListenRef.current = false;
+
       const message =
         event.error === "not-allowed" || event.error === "service-not-allowed"
           ? "Microphone access was blocked. Allow microphone access in your browser and try again."
-          : event.error === "no-speech"
-            ? "No speech was detected. Try again when you are ready."
-            : event.error === "network"
-              ? "Voice transcription needs a network connection in this browser."
-              : "Voice transcription stopped unexpectedly. You can keep typing or try again.";
+          : event.error === "audio-capture"
+            ? "Understudy could not access a microphone. Check your input device and try again."
+            : event.error === "no-speech"
+              ? "No speech was detected. Keep speaking or stop when you are done."
+              : event.error === "network"
+                ? "Voice transcription lost its connection. Understudy will try to resume."
+                : "Voice transcription paused unexpectedly. Understudy will try to resume.";
 
       setError(message);
-      setListening(false);
+
+      if (fatal) {
+        publishListening(false);
+      }
     };
 
     recognition.onend = () => {
-      setListening(false);
       recognitionRef.current = null;
+
+      if (!wantsToListenRef.current || fatalErrorRef.current) {
+        publishListening(false);
+        return;
+      }
+
+      restartTimerRef.current = window.setTimeout(() => {
+        if (!wantsToListenRef.current) return;
+        recognitionRef.current = recognition;
+        startRecognition(recognition);
+      }, 250);
     };
 
     recognitionRef.current = recognition;
-
-    try {
-      recognition.start();
-      setListening(true);
-    } catch {
-      recognitionRef.current = null;
-      setListening(false);
-      setError("Voice transcription could not start. You can keep typing or try again.");
-    }
+    startRecognition(recognition);
   }
 
   if (supported === null) {
@@ -194,7 +245,7 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
       <button
         type="button"
         onClick={listening ? stop : start}
@@ -218,7 +269,7 @@ export function VoiceInput({ value, onChange, disabled = false }: Props) {
         </span>
       )}
 
-      {!listening && error && <span className="min-w-0 text-xs leading-5 text-warning">{error}</span>}
+      {error && <span className="min-w-0 text-xs leading-5 text-warning">{error}</span>}
     </div>
   );
 }
