@@ -82,6 +82,24 @@ function mergeInterviewResult(workspace: PersonalWorkspace, result: Reconstructi
   } satisfies PersonalWorkspace;
 }
 
+const LIMITED_ANALYSIS_GAPS: Transition["gaps"] = [
+  {
+    question: "What active work still needs a next step, owner, or deadline that the current evidence does not make explicit?",
+    topic: "Active work",
+    priority: "Critical",
+  },
+  {
+    question: "Which decisions, exceptions, dependencies, or escalation paths would a successor need to know that are not documented here?",
+    topic: "Continuity context",
+    priority: "Critical",
+  },
+  {
+    question: "What recurring responsibilities, rituals, or stakeholder expectations are part of this role but are not captured in the current evidence set?",
+    topic: "Role scope",
+    priority: "Important",
+  },
+];
+
 const DISPOSITIONS: Array<{ value: InterviewGapDisposition; label: string; detail: string }> = [
   { value: "unknown", label: "I don’t know", detail: "Keep this visible as an unresolved follow-up." },
   { value: "ask-someone", label: "Someone else knows", detail: "Keep it visible so the team can get the answer from the right person." },
@@ -104,6 +122,24 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const [usedVoice, setUsedVoice] = useState(false);
   const [showExceptions, setShowExceptions] = useState(false);
   const [previewSourceId, setPreviewSourceId] = useState("");
+
+  useEffect(() => {
+    if (
+      workspace.roleEvidence?.usedModel !== false ||
+      transition.gaps.length > 0 ||
+      workspace.interviewCompletedAt
+    ) {
+      return;
+    }
+
+    onWorkspaceChange({
+      ...workspace,
+      updatedAt: new Date().toISOString(),
+      interviewCompletedAt: undefined,
+      transition: { ...transition, gaps: LIMITED_ANALYSIS_GAPS },
+    });
+    onMessage("Limited analysis could not generate model-backed gap questions, so Understudy added three continuity checks for active work, ownership, and undocumented context.");
+  }, [workspace.roleEvidence?.usedModel, transition.gaps.length, workspace.interviewCompletedAt]);
 
   useEffect(() => {
     if (!focus.length) {
