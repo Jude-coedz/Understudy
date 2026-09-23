@@ -54,14 +54,7 @@ export function IconGithub(props: IconProps) {
 }
 
 export function IconSpark(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <circle cx="4" cy="8" r="1.45" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="11.8" cy="4.2" r="1.45" stroke="currentColor" strokeWidth="1.2" />
-      <circle cx="11.8" cy="11.8" r="1.45" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M5.3 7.35 10.5 4.85M5.3 8.65l5.2 2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </Icon>
-  );
+  return <Icon {...props}><path d="M8 1.7c.4 2.4 1.9 3.9 4.3 4.3C9.9 6.4 8.4 7.9 8 10.3 7.6 7.9 6.1 6.4 3.7 6 6.1 5.6 7.6 4.1 8 1.7Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round"/><path d="M12.3 10.6c.2 1.1.9 1.8 2 2-1.1.2-1.8.9-2 2-.2-1.1-.9-1.8-2-2 1.1-.2 1.8-.9 2-2Z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/></Icon>;
 }
 
 export function IconMessage(props: IconProps) {
