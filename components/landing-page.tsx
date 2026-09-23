@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { IconChevronRight, IconFile, IconSpark, IconCheck } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 const steps = [
   {
@@ -33,7 +34,7 @@ export function LandingPage() {
       <header className="border-b border-border/70 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</span>
+            <UnderstudyMark size={32} />
             Understudy
           </Link>
           <div className="flex items-center gap-4"><Link href="/demo" className="text-sm font-medium text-muted transition-colors hover:text-foreground">See the demo</Link><Link href="/handoffs" className="text-sm font-medium text-muted transition-colors hover:text-foreground">My handoffs</Link></div>
@@ -41,8 +42,9 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className="mx-auto flex min-h-[72vh] max-w-6xl items-center px-5 py-20 lg:px-8 lg:py-28">
-          <div className="max-w-4xl">
+        <section className="relative mx-auto flex min-h-[72vh] max-w-6xl items-center overflow-hidden px-5 py-20 lg:px-8 lg:py-28">
+          <div className="understudy-ambient -right-24 top-8 h-72 w-72 sm:h-96 sm:w-96" aria-hidden />
+          <div className="relative z-10 max-w-4xl">
             <motion.p initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="text-sm font-medium text-accent">Work moves. Knowledge shouldn&apos;t disappear.</motion.p>
             <motion.h1 initial={reducedMotion ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.05, duration: 0.45 }} className="mt-5 max-w-4xl text-5xl font-semibold tracking-[-0.06em] sm:text-6xl lg:text-7xl">Turn scattered work into a handoff someone can actually continue.</motion.h1>
             <motion.p initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.1, duration: 0.45 }} className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">Understudy reads the work that already exists, finds what would otherwise be lost, and helps the next owner verify the transfer.</motion.p>
