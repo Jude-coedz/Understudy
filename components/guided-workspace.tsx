@@ -25,6 +25,8 @@ import { HandoffNotebook } from "./handoff-notebook";
 import { EmbeddedAskPanel } from "./embedded-ask-panel";
 import { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from "@/lib/ai-context";
 import { IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
+import { AnalysisOverlay } from "./analysis-overlay";
 
 type Stage = "sources" | "map" | "interview" | "handoff";
 type SourceMode = "upload" | "paste" | "drive" | "ai";
@@ -163,6 +165,7 @@ export function GuidedWorkspace() {
   const [sourceQuery, setSourceQuery] = useState("");
   const [showAsk, setShowAsk] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
+  const sourceListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const refresh = () => {
@@ -260,11 +263,14 @@ export function GuidedWorkspace() {
       },
     };
     persist(next);
+    const totalSources = originalSourcesFor(next).length;
     setQueued([]);
     setSourceTitle("");
     setSourceText("");
     setAdding(false);
-    setMessage(`${items.length} source${items.length === 1 ? "" : "s"} added. Understudy will reason across the whole set once when you connect the evidence.`);
+    setShowAllSources(true);
+    setMessage(`${items.length} source${items.length === 1 ? "" : "s"} added · ${totalSources} total in this handoff. Understudy will reason across the whole set once when you connect the evidence.`);
+    window.requestAnimationFrame(() => sourceListRef.current?.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" }));
   }
 
   async function queueFiles(files?: FileList | null) {
@@ -514,7 +520,7 @@ export function GuidedWorkspace() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</Link>
+            <Link href="/" aria-label="Understudy home"><UnderstudyMark size={32} /></Link>
             <div className="min-w-0"><p className="truncate text-sm font-medium">{transition.person} → {transition.successor}</p><p className="truncate text-xs text-subtle">{transition.role} handoff</p></div>
           </div>
           <div className="flex items-center gap-2">
@@ -549,11 +555,11 @@ export function GuidedWorkspace() {
             <section className="mx-auto max-w-3xl">
               <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Give Understudy the work that already exists.</h1><p className="mt-3 text-base leading-7 text-muted">Add normal work artifacts. Understudy keeps every file separate while it reads them, then connects the set only when you choose to continue.</p></div>
 
-              {originalSources.length > 0 && !adding && <div className="mt-7 rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">{originalSources.length} source{originalSources.length === 1 ? "" : "s"} in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">Opening this step does not invalidate your reconstruction. It changes only when you actually add or remove evidence.</p></div><button onClick={() => setAdding(true)} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background shadow-sm">+ Add evidence</button></div><div className="mt-4 max-h-80 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-background">{visibleSources.map((source) => <div key={source.id} className="flex items-center gap-3 px-3 py-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="text-xs text-subtle">{evidenceLabel(source)}</p></div><button onClick={() => setPreviewSourceId(source.id)} className="text-xs text-subtle">View</button><button onClick={() => removeSource(source)} className="text-xs text-faint hover:text-danger">Remove</button></div>)}</div>{originalSources.length > 6 && <button onClick={() => setShowAllSources((value) => !value)} className="mt-3 text-xs font-medium text-accent">{showAllSources ? "Show less" : `View all ${originalSources.length}`}</button>}</div>}
+              {originalSources.length > 0 && !adding && <div ref={sourceListRef} className="mt-7 rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium">{originalSources.length} source{originalSources.length === 1 ? "" : "s"} in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">Opening this step does not invalidate your reconstruction. It changes only when you actually add or remove evidence.</p></div><button onClick={() => setAdding(true)} className="rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background shadow-sm">+ Add evidence</button></div><div className="mt-4 max-h-80 divide-y divide-border overflow-y-auto rounded-xl border border-border bg-background">{visibleSources.map((source) => <div key={source.id} className="flex items-center gap-3 px-3 py-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card"><IconFile className="h-4 w-4 text-muted" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="text-xs text-subtle">{evidenceLabel(source)}</p></div><button onClick={() => setPreviewSourceId(source.id)} className="text-xs text-subtle">View</button><button onClick={() => removeSource(source)} className="text-xs text-faint hover:text-danger">Remove</button></div>)}</div>{originalSources.length > 6 && <button onClick={() => setShowAllSources((value) => !value)} className="mt-3 text-xs font-medium text-accent">{showAllSources ? "Show less" : `View all ${originalSources.length}`}</button>}</div>}
 
               {aiContextSources.length > 0 && !adding && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent-soft p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-accent"><IconSpark /></span><div className="min-w-0"><p className="text-sm font-medium">AI context is included in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">{aiContextSources.length} recovered context source{aiContextSources.length === 1 ? "" : "s"} saved. Understudy will combine {aiContextSources.length === 1 ? "it" : "them"} with every document, Drive file, GitHub source, or pasted artifact you add before you connect the evidence.</p><div className="mt-2 flex flex-wrap gap-1.5">{aiContextSources.slice(0, 3).map((source) => <span key={source.id} className="rounded-full border border-accent/15 bg-card px-2 py-1 text-[11px] text-muted">{source.provider}</span>)}</div></div></motion.div>}
 
-              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} onClick={() => setSourceMode(mode)} className={`rounded-lg px-3 py-2 text-xs font-medium ${sourceMode === mode ? "bg-foreground text-background" : "text-muted hover:bg-background"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}</div><div className="p-5">
+              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} data-ui-action="nav" aria-pressed={sourceMode === mode} onClick={() => setSourceMode(mode)} className={`rounded-xl border px-3 py-2 text-xs font-medium ${sourceMode === mode ? "border-accent/20 bg-accent-soft text-foreground shadow-sm" : "border-transparent text-muted hover:border-border hover:bg-background hover:text-foreground"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}</div><div className="p-5">
                 {sourceMode === "upload" && <><button disabled={Boolean(readingFiles || analysisProgress)} onClick={() => uploadRef.current?.click()} className="flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border-strong bg-background px-6 text-center disabled:cursor-wait"><IconUpload className="text-muted" /><p className="mt-3 text-sm font-medium">Choose one or more work files</p><p className="mt-1 max-w-md text-xs leading-5 text-subtle">{SUPPORTED_UPLOAD_LABEL}</p></button><input ref={uploadRef} type="file" multiple accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(event) => void queueFiles(event.target.files)} /></>}
                 {readingFiles && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-soft px-4 py-3"><motion.span animate={reducedMotion ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-4 w-4 rounded-full border-2 border-accent/30 border-t-accent" /><div><p className="text-sm font-medium">Reading file {readingFiles.current} of {readingFiles.total}</p><p className="text-xs text-subtle">{readingFiles.name}</p></div></motion.div>}
                 {sourceMode === "paste" && <div><input value={sourceTitle} onChange={(event) => { setSourceTitle(event.target.value); setSourceProvider("Pasted evidence"); }} placeholder="Source title" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" /><textarea value={sourceText} onChange={(event) => { setSourceText(event.target.value); setSourceProvider("Pasted evidence"); }} rows={8} placeholder="Paste the artifact exactly as it exists…" className="mt-3 w-full rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none" /><button disabled={!sourceTitle.trim() || !sourceText.trim() || Boolean(analysisProgress)} onClick={() => void analyseBatch([{ id: crypto.randomUUID(), title: sourceTitle.trim(), text: sourceText.trim(), provider: sourceProvider }])} className="mt-3 h-10 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-35">Add this source</button></div>}
@@ -616,6 +622,13 @@ export function GuidedWorkspace() {
         </motion.main>
       </div>
 
+      <AnalysisOverlay
+        open={synthesisPhase >= 0}
+        title="Connecting your evidence"
+        detail={`Comparing ${roleSources.length} source${roleSources.length === 1 ? "" : "s"} across this handoff.`}
+        phases={SYNTHESIS_PHASES}
+        activePhase={Math.max(0, synthesisPhase)}
+      />
       <SourcePreviewDialog source={previewSource} body={previewSource ? workspace.sourceBodies[previewSource.id] ?? "" : ""} onClose={() => setPreviewSourceId("")} title="Evidence source" />
     </div>
   );
