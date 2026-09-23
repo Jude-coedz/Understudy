@@ -126,6 +126,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     [workspace, current],
   );
   const previewSource = transition.sources.find((source) => source.id === previewSourceId) ?? null;
+  const modelBackedReview = workspace.roleEvidence?.usedModel !== false;
 
   function chooseDisposition(status: InterviewGapDisposition) {
     if (!current) return;
@@ -213,7 +214,9 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
               ? "Choosing “I don’t know” or “Someone else knows” does not make a critical question disappear. Bring it back when the answer is available."
               : parked.length
                 ? `These ${parked.length} item${parked.length === 1 ? "" : "s"} will stay visible in the handoff as follow-ups. They are not being treated as resolved.`
-                : "Understudy has no remaining active questions. Finish this step explicitly before moving to handoff verification."}
+                : modelBackedReview
+                  ? "Understudy has no remaining active questions after the reviewed reconstruction. Finish this step explicitly before moving to handoff verification."
+                  : "This handoff was reconstructed in limited analysis mode. If no questions appear here, reconnect the evidence so Understudy can create the fallback continuity questions instead of treating missing synthesis as a clean review."}
           </p>
         </div>
 
@@ -236,7 +239,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
         {!hasCriticalFollowUp && !workspace.interviewCompletedAt && (
           <button onClick={finishGapReview} className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-medium text-white">
-            {parked.length ? `Finish gap review with ${parked.length} follow-up${parked.length === 1 ? "" : "s"}` : "Finish gap review"}
+            {parked.length ? `Finish gap review with ${parked.length} follow-up${parked.length === 1 ? "" : "s"}` : modelBackedReview ? "Finish gap review" : "Finish limited gap review"}
           </button>
         )}
 
