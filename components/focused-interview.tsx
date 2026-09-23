@@ -100,6 +100,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const [selectedQuestion, setSelectedQuestion] = useState(focus[0]?.question ?? "");
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
   const [showExceptions, setShowExceptions] = useState(false);
   const [previewSourceId, setPreviewSourceId] = useState("");
 
@@ -297,14 +298,14 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
                 className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
               />
               <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <VoiceInput value={answer} onChange={setAnswer} disabled={busy} />
+                <VoiceInput value={answer} onChange={setAnswer} onListeningChange={setVoiceListening} disabled={busy} />
                 <span className="text-xs text-faint">Voice becomes editable text. Review it before saving.</span>
               </div>
             </div>
 
             <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
-              <motion.button whileTap={reducedMotion ? undefined : { scale: 0.97 }} disabled={!answer.trim() || busy} onClick={() => void submitAnswer()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-35">{busy ? "Updating the handoff…" : "Save and continue"}<IconSpark /></motion.button>
+              <motion.button whileTap={reducedMotion ? undefined : { scale: 0.97 }} disabled={!answer.trim() || busy || voiceListening} onClick={() => void submitAnswer()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-35">{busy ? "Updating the handoff…" : voiceListening ? "Stop speaking to save" : "Save and continue"}<IconSpark /></motion.button>
             </div>
 
             <AnimatePresence initial={false}>
