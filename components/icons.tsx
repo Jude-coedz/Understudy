@@ -3,12 +3,14 @@ type IconProps = { className?: string };
 function Icon({ children, className }: IconProps & { children: React.ReactNode }) {
   return (
     <svg
-      className={className}
-      width="16"
-      height="16"
+      className={`understudy-icon ${className ?? ""}`}
+      width="18"
+      height="18"
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden
+      focusable="false"
+      data-understudy-icon="true"
     >
       {children}
     </svg>
