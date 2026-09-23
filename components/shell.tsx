@@ -13,6 +13,7 @@ import {
   IconSpark,
   IconTransition,
 } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 const PRIMARY_NAV = [
   { href: "/workspace", label: "Workspace", icon: IconHome },
@@ -44,16 +45,17 @@ export function Shell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border bg-sidebar/95 backdrop-blur-xl md:flex">
-        <div className="flex h-16 items-center px-5">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col overflow-hidden border-r border-border bg-sidebar/95 backdrop-blur-xl md:flex">
+        <div className="understudy-ambient -left-24 -top-16 h-64 w-64 opacity-30" aria-hidden />
+        <div className="relative z-10 flex h-16 items-center px-5">
           <Link href="/" className="flex items-center gap-3 font-medium tracking-[-0.025em]">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-[13px] font-semibold text-white shadow-sm">U</span>
+            <UnderstudyMark size={32} />
             <span className="text-[15px]">Understudy</span>
             <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.08em] text-subtle">Beta</span>
           </Link>
         </div>
 
-        <div className="px-3 pb-4 pt-1">
+        <div className="relative z-10 px-3 pb-4 pt-1">
           <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 shadow-sm">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent-soft text-[12px] font-semibold text-accent">{synced ? "S" : identity?.provider === "google" ? "G" : "P"}</span>
             <span className="min-w-0 flex-1">
@@ -63,7 +65,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="relative z-10 flex-1 space-y-1 px-3">
           {PRIMARY_NAV.map((item) => {
             const active = isActive(item.href);
             const ItemIcon = item.icon;
@@ -77,7 +79,7 @@ export function Shell({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <div className="border-t border-border p-3">
+        <div className="relative z-10 border-t border-border p-3">
           <Link href="/integrations" className={`flex h-10 items-center gap-3 rounded-[10px] px-3 text-[14px] ${isActive("/integrations") ? "bg-accent-soft font-medium text-foreground" : "text-muted hover:bg-card hover:text-foreground"}`}>
             <IconPlug className={isActive("/integrations") ? "text-accent" : "text-subtle"} />
             Integrations
@@ -96,7 +98,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl md:hidden">
-        <Link href="/" className="flex items-center gap-2.5 text-[14px] font-medium"><span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-foreground text-[11px] font-semibold text-white">U</span>Understudy</Link>
+        <Link href="/" className="flex items-center gap-2.5 text-[14px] font-medium"><UnderstudyMark size={28} subtle />Understudy</Link>
         <CloudAccountControl compact />
       </header>
 
