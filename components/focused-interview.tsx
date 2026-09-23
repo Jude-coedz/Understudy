@@ -316,7 +316,23 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
             <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
-              <motion.button whileTap={reducedMotion ? undefined : { scale: 0.97 }} disabled={!answer.trim() || busy || voiceListening} onClick={() => void submitAnswer()} className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white disabled:opacity-35">{busy ? "Updating the handoff…" : voiceListening ? "Stop speaking to save" : "Save and continue"}<IconSpark /></motion.button>
+              <motion.button
+                whileHover={reducedMotion || busy || voiceListening ? undefined : { y: -1.5, scale: 1.01 }}
+                whileTap={reducedMotion ? undefined : { y: 0, scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
+                disabled={!answer.trim() || busy || voiceListening}
+                onClick={() => void submitAnswer()}
+                className="primary-action-depth inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-35"
+              >
+                <span className="relative z-10">{busy ? "Updating the handoff…" : voiceListening ? "Stop dictation to save" : "Save and continue"}</span>
+                <motion.span
+                  className="relative z-10"
+                  animate={busy && !reducedMotion ? { rotate: [0, 10, -8, 0], scale: [1, 1.08, 0.96, 1] } : undefined}
+                  transition={{ duration: 1.2, repeat: busy ? Infinity : 0 }}
+                >
+                  <IconSpark />
+                </motion.span>
+              </motion.button>
             </div>
 
             <AnimatePresence initial={false}>
