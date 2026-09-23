@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useMemo, useState } from "react";
 import { blankTransition, createWorkspace, saveWorkspace } from "@/lib/personal-workspace";
 import { IconChevronRight } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 type Errors = Partial<Record<"person" | "role" | "department" | "successor" | "targetDate", string>>;
 
@@ -64,7 +65,7 @@ export function NewHandoffFlow() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</span>Understudy</Link>
+          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <Link href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
         </div>
       </header>
