@@ -171,7 +171,7 @@ function readinessFromMetrics(metrics: Transition["metrics"]) {
 
 function fallbackModel(input: WholeRoleSynthesisInput): WholeRoleModelOutput {
   return {
-    overview: `Understudy grouped ${input.sources.length} evidence source${input.sources.length === 1 ? "" : "s"} for ${input.transition.person}'s ${input.transition.role} handoff. Cross-source AI synthesis was unavailable, so treat these domains as a conservative evidence index rather than a complete map of the role.`,
+    overview: `Understudy indexed ${input.sources.length} evidence source${input.sources.length === 1 ? "" : "s"} for ${input.transition.person}'s ${input.transition.role} handoff. Full cross-source synthesis is unavailable in this session, so this view stays source-backed and conservative. You can still review the evidence and continue, but relationships between work areas may be incomplete.`,
     domains: input.sources.slice(0, 12).map((source) => ({
       name: source.title,
       type: "Responsibility",
@@ -181,7 +181,7 @@ function fallbackModel(input: WholeRoleSynthesisInput): WholeRoleModelOutput {
       missing: ["Cross-source relationships and missing role areas still need human review."],
     })),
     missingAreas: [
-      "Cross-source synthesis was unavailable. Review whether recurring responsibilities, stakeholders, decisions, and operational exceptions are represented.",
+      "Full cross-source synthesis is unavailable in this session. Review whether recurring responsibilities, stakeholders, decisions, and operational exceptions are represented.",
     ],
     contradictions: [],
     projects: input.current?.projects?.map((project) => ({
