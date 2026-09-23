@@ -45,9 +45,14 @@ export function SourcePreviewDialog({ source, body, onClose, title = "Source con
               </div>
               <button onClick={onClose} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:bg-background">Close</button>
             </div>
-            <div className="max-h-[65vh] overflow-auto px-5 py-5 sm:px-6">
-              <p className="mb-3 text-xs leading-5 text-subtle">This is the stored evidence text Understudy used. It is shown so you can trace a finding or interview question back to the material that informed it.</p>
-              <pre className="whitespace-pre-wrap rounded-xl bg-background p-4 font-sans text-sm leading-7 text-muted">{body || "Stored source text is unavailable."}</pre>
+            <div className="max-h-[68vh] overflow-auto px-5 py-5 sm:px-6">
+              <p className="mb-4 text-xs leading-5 text-subtle">This is the stored evidence text Understudy used. It is shown so you can trace a finding or interview question back to the material that informed it.</p>
+              <div className="notebook-sheet relative overflow-hidden rounded-2xl border border-border-strong">
+                <div className="notebook-sheet-margin" aria-hidden />
+                <div className="notebook-sheet-content">
+                  <pre className="whitespace-pre-wrap font-sans text-[14px] leading-8 text-muted">{body || "Stored source text is unavailable."}</pre>
+                </div>
+              </div>
             </div>
           </motion.div>
         </motion.div>
