@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { getCurrentWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
 import { isDismissedInterviewGap } from "@/lib/interview-priority";
 import { EmbeddedAskPanel } from "./embedded-ask-panel";
-import { IconCheck, IconFile, IconSpark } from "./icons";
+import { IconAsk, IconCheck, IconFile } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 export function HandoffRecordPage() {
   const reducedMotion = useReducedMotion();
@@ -47,11 +48,11 @@ export function HandoffRecordPage() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-white">U</span>Understudy</Link>
+          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setShowAsk((value) => !value)} className={`hidden items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium sm:inline-flex ${showAsk ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-card text-muted hover:bg-card-hover"}`}><IconSpark className="h-4 w-4" />Ask Understudy</button>
-            <Link href="/workspace" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Open handoff</Link>
-            <Link href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
+            <button type="button" data-ui-action="primary" onClick={() => setShowAsk((value) => !value)} className="hidden items-center gap-2 rounded-xl border border-accent/25 bg-accent px-3.5 py-2 text-xs font-semibold text-white sm:inline-flex"><IconAsk className="h-4 w-4" />{showAsk ? "Close Q&A" : "Ask this handoff"}</button>
+            <Link href="/workspace" data-ui-action="secondary" className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Open handoff</Link>
+            <Link href="/handoffs" data-ui-action="secondary" className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
           </div>
         </div>
       </header>
@@ -61,6 +62,23 @@ export function HandoffRecordPage() {
           <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Handoff record</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{transition.person} → {transition.successor}</h1><p className="mt-2 text-sm text-muted">{transition.role} · {transition.department}</p></div>
           <span className={`inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-xs font-medium sm:self-auto ${accepted ? "bg-ok/10 text-ok" : "bg-warning/10 text-warning"}`}>{accepted && <IconCheck className="h-3.5 w-3.5" />}{accepted ? "Handoff complete" : "Handoff in progress"}</span>
         </div>
+
+        {!showAsk && (
+          <motion.button
+            type="button"
+            data-ui-action="secondary"
+            onClick={() => setShowAsk(true)}
+            whileHover={reducedMotion ? undefined : { y: -2 }}
+            className="mt-6 flex w-full items-center gap-4 rounded-2xl border border-accent/20 bg-accent-soft/60 p-4 text-left"
+          >
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-accent/20 bg-card text-accent shadow-sm"><IconAsk className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold">Ask this handoff</span>
+              <span className="mt-1 block text-xs leading-5 text-subtle">Ask about an owner, decision, risk, dependency, project, or anything supported by the saved evidence.</span>
+            </span>
+            <span className="shrink-0 text-xs font-semibold text-accent">Open Q&A</span>
+          </motion.button>
+        )}
 
         <AnimatePresence initial={false}>
           {showAsk && <motion.div initial={reducedMotion ? false : { opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0 }} className="mt-6 overflow-hidden"><EmbeddedAskPanel workspace={workspace} onClose={() => setShowAsk(false)} heading="Ask this handoff" /></motion.div>}
@@ -86,7 +104,7 @@ export function HandoffRecordPage() {
           </div>
         </section>}
 
-        <div className="mt-6 sm:hidden"><button type="button" onClick={() => setShowAsk((value) => !value)} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card text-sm font-medium text-muted"><IconSpark className="h-4 w-4" />Ask Understudy</button></div>
+        <div className="mt-6 sm:hidden"><button type="button" data-ui-action="primary" onClick={() => setShowAsk((value) => !value)} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-accent/25 bg-accent text-sm font-semibold text-white"><IconAsk className="h-4 w-4" />{showAsk ? "Close Q&A" : "Ask this handoff"}</button></div>
       </motion.main>
     </div>
   );
