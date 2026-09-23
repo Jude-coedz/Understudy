@@ -1,6 +1,8 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { normalizeVoiceTranscript } from "@/lib/voice-transcript";
 
 type SpeechRecognitionAlternativeLike = {
   transcript: string;
@@ -67,22 +69,23 @@ function formatDuration(seconds: number) {
 
 function MicIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="5.25" y="1.75" width="5.5" height="8" rx="2.75" stroke="currentColor" strokeWidth="1.25" />
-      <path d="M3.5 7.75A4.5 4.5 0 0 0 12.5 7.75M8 12.25V14M5.75 14h4.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect x="5.2" y="1.6" width="5.6" height="8.1" rx="2.8" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M3.45 7.6A4.55 4.55 0 0 0 12.55 7.6M8 12.15V14M5.7 14h4.6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
     </svg>
   );
 }
 
 function StopIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" />
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <rect x="4" y="4" width="8" height="8" rx="1.7" fill="currentColor" />
     </svg>
   );
 }
 
 export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, disabled = false }: Props) {
+  const reducedMotion = useReducedMotion();
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const restartTimerRef = useRef<number | null>(null);
   const wantsToListenRef = useRef(false);
@@ -191,8 +194,9 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
         finalTranscriptRef.current = appendTranscript(finalTranscriptRef.current, finalChunk);
       }
 
-      const captured = appendTranscript(finalTranscriptRef.current, interimChunk);
-      onChange(appendTranscript(baseTextRef.current, captured));
+      const rawCaptured = appendTranscript(finalTranscriptRef.current, interimChunk);
+      const formattedCaptured = normalizeVoiceTranscript(rawCaptured);
+      onChange(appendTranscript(baseTextRef.current, formattedCaptured));
     };
 
     recognition.onerror = (event) => {
@@ -256,21 +260,55 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-      <button
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+      <motion.button
         type="button"
         onClick={listening ? stop : start}
         disabled={disabled}
         aria-pressed={listening}
-        className={`inline-flex h-8 shrink-0 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-          listening
-            ? "border-accent/30 bg-accent/10 text-accent"
-            : "border-border bg-card text-muted hover:border-border-strong hover:bg-card-hover"
+        aria-label={listening ? "Stop dictation" : "Start dictation"}
+        whileHover={reducedMotion || disabled ? undefined : { y: -1.5, scale: 1.015 }}
+        whileTap={reducedMotion || disabled ? undefined : { y: 0, scale: 0.965 }}
+        transition={{ type: "spring", stiffness: 430, damping: 28, mass: 0.6 }}
+        className={`liquid-action relative inline-flex h-9 shrink-0 items-center gap-2.5 overflow-hidden rounded-xl px-3.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${
+          listening ? "liquid-action-recording text-accent-hover" : "text-muted"
         }`}
       >
-        {listening ? <StopIcon /> : <MicIcon />}
-        {listening ? "Stop" : "Speak answer"}
-      </button>
+        <span className="relative grid h-5 w-5 place-items-center">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={listening ? "stop" : "mic"}
+              initial={reducedMotion ? false : { opacity: 0, scale: 0.65, rotate: -8 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.65, rotate: 8 }}
+              transition={{ duration: 0.14 }}
+              className="absolute inset-0 grid place-items-center"
+            >
+              {listening ? <StopIcon /> : <MicIcon />}
+            </motion.span>
+          </AnimatePresence>
+
+          {listening && (
+            <motion.span
+              className="pointer-events-none absolute inset-0 rounded-full border border-accent/35"
+              animate={reducedMotion ? { opacity: 0 } : { scale: [1, 1.7], opacity: [0.6, 0] }}
+              transition={{ duration: 1.35, repeat: Infinity, ease: "easeOut" }}
+            />
+          )}
+        </span>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={listening ? "stop-label" : "dictate-label"}
+            initial={reducedMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+            transition={{ duration: 0.14 }}
+          >
+            {listening ? "Stop" : "Dictate"}
+          </motion.span>
+        </AnimatePresence>
+      </motion.button>
 
       {!listening && (
         <label className="flex items-center gap-1.5 text-xs text-faint">
@@ -279,7 +317,7 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
             value={language}
             onChange={(event) => setLanguage(event.target.value)}
             disabled={disabled}
-            className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-subtle outline-none hover:border-border-strong disabled:opacity-40"
+            className="glass-select h-9 rounded-xl px-2.5 text-xs text-subtle outline-none disabled:opacity-40"
             title="Speech language hint"
           >
             <option value="auto">Language: Auto</option>
@@ -290,13 +328,25 @@ export function VoiceInput({ value, onChange, onListeningChange, onVoiceUsed, di
         </label>
       )}
 
-      {listening && (
-        <span className="flex min-w-0 items-center gap-2 text-xs text-subtle" aria-live="polite">
-          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent" />
-          <span>Listening</span>
-          <span className="font-mono text-faint">{formatDuration(elapsed)}</span>
-        </span>
-      )}
+      <AnimatePresence initial={false}>
+        {listening && (
+          <motion.span
+            initial={reducedMotion ? false : { opacity: 0, x: -4 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -4 }}
+            className="flex min-w-0 items-center gap-2 text-xs text-subtle"
+            aria-live="polite"
+          >
+            <motion.span
+              className="h-2 w-2 shrink-0 rounded-full bg-accent"
+              animate={reducedMotion ? undefined : { opacity: [0.4, 1, 0.4], scale: [0.92, 1.08, 0.92] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            />
+            <span>Listening</span>
+            <span className="font-mono text-faint">{formatDuration(elapsed)}</span>
+          </motion.span>
+        )}
+      </AnimatePresence>
 
       {error && <span className="min-w-0 text-xs leading-5 text-warning">{error}</span>}
     </div>
