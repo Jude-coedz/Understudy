@@ -67,10 +67,12 @@ export function AIContextImport({
               key={item}
               type="button"
               onClick={() => { setAssistant(item); setCopied(false); }}
-              className={`rounded-lg px-3 py-2 text-xs transition-colors ${
+              data-ui-action="nav"
+              aria-pressed={assistant === item}
+              className={`rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
                 assistant === item
-                  ? "bg-foreground text-background"
-                  : "border border-border bg-card text-muted hover:bg-card-hover"
+                  ? "border-accent/20 bg-accent-soft text-foreground shadow-sm"
+                  : "border-border bg-card text-muted hover:bg-card-hover hover:text-foreground"
               }`}
             >
               {item}
@@ -90,8 +92,10 @@ export function AIContextImport({
               key={item.id}
               type="button"
               onClick={() => { setScope(item.id); setCopied(false); }}
-              className={`rounded-lg border p-3 text-left transition-colors ${
-                scope === item.id ? "border-border-strong bg-card-hover" : "border-border bg-card hover:bg-card-hover"
+              data-ui-action="nav"
+              aria-pressed={scope === item.id}
+              className={`rounded-xl border p-3 text-left transition-colors ${
+                scope === item.id ? "border-accent/20 bg-accent-soft" : "border-border bg-card hover:bg-card-hover"
               }`}
             >
               <p className="text-xs font-medium text-foreground">{item.label}</p>
