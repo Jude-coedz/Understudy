@@ -11,6 +11,7 @@ import {
   IconFile,
   IconSpark,
 } from "./icons";
+import { UnderstudyMark } from "./understudy-mark";
 
 type DemoStep = "collect" | "understand" | "gaps" | "handoff";
 
