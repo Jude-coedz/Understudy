@@ -45,8 +45,8 @@ export function LandingPage() {
           </Link>
           <nav className="flex items-center gap-2">
             <Link href="/handoffs" className="hidden rounded-xl px-3 py-2 text-sm font-medium text-muted hover:text-foreground sm:inline-flex">My handoffs</Link>
-            <Link href="/demo" className="rounded-xl border border-border bg-card/75 px-3.5 py-2 text-sm font-medium text-muted backdrop-blur-xl hover:text-foreground">Guided demo</Link>
-            <Link href="/new" className="rounded-xl bg-foreground px-3.5 py-2 text-sm font-medium text-background">Try Understudy</Link>
+            <Link href="/demo" className="hidden rounded-xl border border-border bg-card/75 px-3.5 py-2 text-sm font-medium text-muted backdrop-blur-xl hover:text-foreground sm:inline-flex">Guided demo</Link>
+            <Link href="/new" data-ui-action="primary" className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm">Create a handoff</Link>
           </nav>
         </div>
       </header>
@@ -72,13 +72,13 @@ export function LandingPage() {
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/demo" className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white">
-                <IconSpark className="h-4 w-4" />
-                See the full demo
-              </Link>
-              <Link href="/new" className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card/80 px-5 text-sm font-semibold text-muted backdrop-blur-xl">
+              <Link href="/new" data-ui-action="primary" className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm">
                 Create a handoff
                 <IconChevronRight />
+              </Link>
+              <Link href="/demo" className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card/80 px-5 text-sm font-semibold text-muted backdrop-blur-xl">
+                <IconSpark className="h-4 w-4" />
+                Guided demo
               </Link>
             </div>
 
