@@ -51,7 +51,7 @@ export function HandoffRecordPage() {
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2">
             <button type="button" data-ui-action="primary" onClick={() => setShowAsk((value) => !value)} className="hidden items-center gap-2 rounded-xl border border-accent/25 bg-accent px-3.5 py-2 text-xs font-semibold text-white sm:inline-flex"><IconAsk className="h-4 w-4" />{showAsk ? "Close Q&A" : "Ask this handoff"}</button>
-            <Link href="/workspace" data-ui-action="secondary" className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Open handoff</Link>
+            {!accepted && <Link href="/workspace" data-ui-action="secondary" className="hidden rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">Open workflow</Link>}
             <Link href="/handoffs" data-ui-action="secondary" className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
           </div>
         </div>
