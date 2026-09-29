@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ReconstructionResult } from "@/lib/v2-reconstruction";
 import { getCurrentWorkspace, saveWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
@@ -150,7 +151,7 @@ export function GithubEvidenceImport() {
       <div className="mx-auto max-w-2xl px-6 py-16 text-center">
         <h1 className="text-2xl font-semibold">Create a handoff first</h1>
         <p className="mt-2 text-sm text-muted">GitHub evidence belongs to one specific handoff so repository activity never gets mixed between people.</p>
-        <a href="/new" className="mt-5 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white">Create a handoff</a>
+        <Link href="/new" className="mt-5 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white">Create a handoff</Link>
       </div>
     );
   }
