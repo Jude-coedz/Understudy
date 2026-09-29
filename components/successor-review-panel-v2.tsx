@@ -222,7 +222,7 @@ export function SuccessorReviewPanelV2() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">For the next owner · {transition.successor}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Can you continue the work without {transition.person}?</h1>
             <p className="mt-3 text-sm leading-6 text-muted">
-              This is your readiness check as the successor. Review the handoff, ask questions, then confirm each area only when you could genuinely take over. If something is unclear, raise a concern and Understudy sends it back to {transition.person} as a blocking question.
+              This is your readiness check as the successor. Review the handoff, ask questions, then confirm each area only when you could genuinely take over. If something is unclear, raise a concern and Understudy adds it back to the handoff as a blocking question for {transition.person} to resolve.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -281,7 +281,7 @@ export function SuccessorReviewPanelV2() {
                     <div className="border-t border-warning/20 bg-background/65 p-5">
                       <p className="text-sm font-semibold">What is unclear?</p>
                       <p className="mt-1 text-xs leading-5 text-subtle">
-                        Understudy adds this concern to the handoff and reopens it for {transition.person}. HR is not required unless your company chooses to involve them separately.
+                        Understudy adds this concern to the handoff and reopens the missing-context step for {transition.person}. It is not an HR approval flow.
                       </p>
                       <textarea
                         value={concernText}
@@ -292,7 +292,7 @@ export function SuccessorReviewPanelV2() {
                       />
                       <div className="mt-3 flex flex-wrap justify-end gap-2">
                         <button onClick={() => { setConcernKey(null); setConcernText(""); }} className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted">Cancel</button>
-                        <button onClick={submitConcern} disabled={!concernText.trim()} className="h-9 rounded-lg bg-warning px-3.5 text-xs font-semibold text-white disabled:opacity-40">Send back to {transition.person}</button>
+                        <button onClick={submitConcern} disabled={!concernText.trim()} className="h-9 rounded-lg bg-warning px-3.5 text-xs font-semibold text-white disabled:opacity-40">Raise concern</button>
                       </div>
                     </div>
                   </motion.div>
