@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect } from "react";
 import type { SourceItem } from "@/data/v2-demo";
 import { IconFile } from "./icons";
 
@@ -13,6 +14,16 @@ type Props = {
 
 export function SourcePreviewDialog({ source, body, onClose, title = "Source context" }: Props) {
   const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!source) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [source, onClose]);
+
   return (
     <AnimatePresence>
       {source && (
