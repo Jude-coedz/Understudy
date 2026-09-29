@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { getCurrentWorkspace, saveWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
 import { applyReviewMetric, SUCCESSOR_REVIEW_CHECKS, type SuccessorReview, type SuccessorReviewCheckKey } from "@/lib/successor-review";
-import { IconCheck, IconChevronRight } from "./icons";
+import { IconAsk, IconCheck, IconChevronRight, IconMessage } from "./icons";
 
 function reviewFor(workspace: PersonalWorkspace): SuccessorReview {
   const now = new Date().toISOString();
@@ -30,8 +30,9 @@ function savedTime(value?: string) {
 export function SuccessorReviewPanelV2() {
   const reducedMotion = useReducedMotion();
   const [workspace, setWorkspace] = useState<PersonalWorkspace | null>(null);
-  const [question, setQuestion] = useState("");
   const [notes, setNotes] = useState("");
+  const [concernKey, setConcernKey] = useState<SuccessorReviewCheckKey | null>(null);
+  const [concernText, setConcernText] = useState("");
   const [notesDirty, setNotesDirty] = useState(false);
   const [message, setMessage] = useState("");
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
@@ -102,30 +103,43 @@ export function SuccessorReviewPanelV2() {
     return next;
   }
 
-  function toggleCheck(key: SuccessorReviewCheckKey) {
+  function confirmCheck(key: SuccessorReviewCheckKey) {
     const now = new Date().toISOString();
     persist({
       ...review,
       status: "pending",
       acceptedAt: undefined,
       updatedAt: now,
-      checks: { ...review.checks, [key]: !review.checks[key] },
+      checks: { ...review.checks, [key]: true },
+    });
+    setConcernKey(null);
+    setConcernText("");
+    setMessage("");
+  }
+
+  function resetCheck(key: SuccessorReviewCheckKey) {
+    const now = new Date().toISOString();
+    persist({
+      ...review,
+      status: "pending",
+      acceptedAt: undefined,
+      updatedAt: now,
+      checks: { ...review.checks, [key]: false },
     });
     setMessage("");
   }
 
-  function saveNotes() {
-    const saved = notes.trimEnd();
-    const now = new Date().toISOString();
-    persist({ ...review, notes: saved, notesSavedAt: now, updatedAt: now });
-    setNotes(saved);
-    setNotesDirty(false);
-    setMessage(saved ? "Successor notes saved to the permanent handoff record." : "Successor notes cleared from the handoff record.");
+  function openConcern(key: SuccessorReviewCheckKey) {
+    setConcernKey(key);
+    setConcernText("");
+    setMessage("");
   }
 
-  function submitQuestion() {
-    const text = question.trim();
-    if (!text) return;
+  function submitConcern() {
+    const text = concernText.trim();
+    if (!text || !concernKey) return;
+    const area = SUCCESSOR_REVIEW_CHECKS.find((item) => item.key === concernKey);
+    const questionText = area ? area.label + ": " + text : text;
     const now = new Date().toISOString();
     const next: SuccessorReview = {
       ...review,
@@ -134,19 +148,23 @@ export function SuccessorReviewPanelV2() {
       updatedAt: now,
       notes: notes.trimEnd(),
       notesSavedAt: notes.trim() ? now : review.notesSavedAt,
-      submittedQuestions: [...new Set([...review.submittedQuestions, text])],
+      checks: { ...review.checks, [concernKey]: false },
+      submittedQuestions: [...new Set([...review.submittedQuestions, questionText])],
     };
-    persist(next, text);
-    setQuestion("");
+    persist(next, questionText);
+    setConcernKey(null);
+    setConcernText("");
     setNotes(next.notes);
     setNotesDirty(false);
   }
 
-  function requestChanges() {
+  function saveNotes() {
+    const saved = notes.trimEnd();
     const now = new Date().toISOString();
-    persist({ ...review, status: "changes-requested", acceptedAt: undefined, notes: notes.trimEnd(), notesSavedAt: notes.trim() ? now : review.notesSavedAt, updatedAt: now });
+    persist({ ...review, notes: saved, notesSavedAt: now, updatedAt: now });
+    setNotes(saved);
     setNotesDirty(false);
-    setMessage("Changes requested. This review is saved and the handoff remains open.");
+    setMessage(saved ? "Your note is saved with the permanent handoff record." : "Successor notes cleared.");
   }
 
   function confirmAccept() {
@@ -183,9 +201,9 @@ export function SuccessorReviewPanelV2() {
         <motion.span initial={reducedMotion ? false : { opacity: 0, scale: 0.72 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 320, damping: 22 }} className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-7 w-7" /></motion.span>
         <p className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ok">Handoff complete</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-[-0.05em]">{transition.successor} accepted the handoff.</h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted">A green tick means the successor explicitly confirmed that statement when they accepted the handoff. It is not an AI score or an automatic verification.</p>
+        <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted">This records the next owner&apos;s own readiness check. It is not an AI score, a performance rating, or HR approval.</p>
         <div className="mx-auto mt-7 max-w-xl rounded-2xl border border-ok/20 bg-ok/5 p-4 text-left">
-          {SUCCESSOR_REVIEW_CHECKS.map((item) => <div key={item.key} className="flex items-center gap-3 py-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ok text-white"><IconCheck className="h-3.5 w-3.5" /></span><div><p className="text-sm font-medium">{item.label}</p><p className="mt-0.5 text-xs leading-5 text-subtle">Explicitly verified on acceptance</p></div></div>)}
+          {SUCCESSOR_REVIEW_CHECKS.map((item) => <div key={item.key} className="flex items-center gap-3 py-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ok text-white"><IconCheck className="h-3.5 w-3.5" /></span><div><p className="text-sm font-medium">{item.label}</p><p className="mt-0.5 text-xs leading-5 text-subtle">Confirmed by the successor</p></div></div>)}
         </div>
         {accepted.notes && <div className="mx-auto mt-4 max-w-xl rounded-2xl border border-border bg-card p-4 text-left"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Successor note saved with this record</p><p className="mt-2 text-sm leading-6 text-muted">{accepted.notes}</p></div>}
         <div className="mt-8 flex flex-wrap justify-center gap-3"><Link href="/handoffs" className="inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-medium text-white">Back to my handoffs</Link><Link href="/record" className="inline-flex h-11 items-center rounded-lg border border-border px-5 text-sm font-medium text-muted">View handoff record</Link></div>
@@ -194,70 +212,145 @@ export function SuccessorReviewPanelV2() {
     );
   }
 
+  const confirmedCount = SUCCESSOR_REVIEW_CHECKS.filter((item) => review.checks[item.key]).length;
+
   return (
-    <div className="mx-auto max-w-4xl px-5 py-8 lg:px-8 lg:py-12">
-      <div className="max-w-2xl">
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Final step · successor verification</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Can {transition.successor} continue the work?</h1>
-        <p className="mt-3 text-sm leading-6 text-muted">These are the five statements the successor will explicitly confirm with one final acceptance. Until then, none of them are marked verified.</p>
+    <div className="mx-auto max-w-5xl px-5 py-8 lg:px-8 lg:py-12">
+      <div className="rounded-[26px] border border-accent/15 bg-accent-soft/45 p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-accent">For the next owner · {transition.successor}</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Can you continue the work without {transition.person}?</h1>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              This is your readiness check as the successor. Review the handoff, ask questions, then confirm each area only when you could genuinely take over. If something is unclear, raise a concern and Understudy sends it back to {transition.person} as a blocking question.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link href="/record" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconMessage className="h-4 w-4" /> Review handoff</Link>
+            <Link href="/ask" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconAsk className="h-4 w-4" /> Ask Understudy</Link>
+          </div>
+        </div>
       </div>
 
       {message && <div className="mt-5 rounded-xl border border-border bg-card px-4 py-3 text-sm leading-6 text-muted" role="status">{message}</div>}
 
-      <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="border-b border-border bg-background/60 px-5 py-3">
-          <p className="text-xs font-medium text-subtle">Acceptance criteria · confirm each one</p>
-          <p className="mt-1 text-[11px] leading-5 text-faint">These are successor confirmations, not AI scores. Review the handoff, then mark each statement when it is genuinely true.</p>
+      <div className="mt-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold">Readiness check</p>
+          <p className="mt-1 text-xs text-subtle">Each confirmation means “I can take responsibility for this area now.”</p>
         </div>
+        <span className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted">{confirmedCount} of {SUCCESSOR_REVIEW_CHECKS.length} ready</span>
+      </div>
+
+      <div className="mt-4 space-y-3">
         {SUCCESSOR_REVIEW_CHECKS.map((item, index) => {
           const checked = review.checks[item.key];
+          const concernOpen = concernKey === item.key;
           return (
-            <button
+            <motion.section
               key={item.key}
-              type="button"
-              aria-pressed={checked}
-              onClick={() => toggleCheck(item.key)}
-              className={`flex w-full items-start gap-4 p-5 text-left ${index ? "border-t border-border" : ""} ${checked ? "bg-ok/5" : "bg-card"}`}
+              layout
+              className={checked ? "overflow-hidden rounded-2xl border border-ok/20 bg-ok/5" : concernOpen ? "overflow-hidden rounded-2xl border border-warning/25 bg-warning/5" : "overflow-hidden rounded-2xl border border-border bg-card"}
             >
-              <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${checked ? "border-ok/25 bg-ok text-white" : "border-border-strong bg-background text-subtle"}`}>
-                {checked ? <IconCheck className="h-3.5 w-3.5" /> : index + 1}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">{item.label}</span>
-                <span className="mt-1 block text-sm leading-6 text-subtle">{item.description}</span>
-              </span>
-              <span className={`ml-auto shrink-0 rounded-full border px-2 py-1 text-[10px] font-medium ${checked ? "border-ok/20 bg-ok/10 text-ok" : "border-border bg-background text-faint"}`}>
-                {checked ? "Confirmed" : "Pending"}
-              </span>
-            </button>
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                <span className={checked ? "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ok/25 bg-ok text-xs font-semibold text-white" : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-strong bg-background text-xs font-semibold text-subtle"}>
+                  {checked ? <IconCheck className="h-4 w-4" /> : index + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{item.label}</p>
+                  <p className="mt-1 text-sm leading-6 text-subtle">{item.description}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {checked ? (
+                    <>
+                      <span className="inline-flex h-9 items-center rounded-lg bg-ok/10 px-3 text-xs font-semibold text-ok">I can continue</span>
+                      <button onClick={() => resetCheck(item.key)} className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-subtle">Change</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => confirmCheck(item.key)} className="h-9 rounded-lg bg-accent px-3.5 text-xs font-semibold text-white">I can continue</button>
+                      <button onClick={() => openConcern(item.key)} className="h-9 rounded-lg border border-border px-3.5 text-xs font-semibold text-muted">I need clarification</button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {concernOpen && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="border-t border-warning/20 bg-background/65 p-5">
+                      <p className="text-sm font-semibold">What is unclear?</p>
+                      <p className="mt-1 text-xs leading-5 text-subtle">
+                        Understudy adds this concern to the handoff and reopens it for {transition.person}. HR is not required unless your company chooses to involve them separately.
+                      </p>
+                      <textarea
+                        value={concernText}
+                        onChange={(event) => setConcernText(event.target.value)}
+                        rows={4}
+                        placeholder={"Tell " + transition.person + " exactly what you need before you can take over this area…"}
+                        className="mt-3 w-full resize-none rounded-xl border border-border bg-card p-3 text-sm leading-6 outline-none"
+                      />
+                      <div className="mt-3 flex flex-wrap justify-end gap-2">
+                        <button onClick={() => { setConcernKey(null); setConcernText(""); }} className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted">Cancel</button>
+                        <button onClick={submitConcern} disabled={!concernText.trim()} className="h-9 rounded-lg bg-warning px-3.5 text-xs font-semibold text-white disabled:opacity-40">Send back to {transition.person}</button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.section>
           );
         })}
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-sm font-medium">Raise a follow-up</h2>
-          <p className="mt-1 text-xs leading-5 text-subtle">This field creates a question, not an answer. Saving it adds the question to this review and to the handoff&apos;s open gaps, then reopens the context review so the current owner can answer it.</p>
-          <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What must be clarified before you take ownership?" className="mt-3 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" />
-          <button onClick={submitQuestion} disabled={!question.trim()} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">Save follow-up and reopen the context review</button>
-          {review.submittedQuestions.length > 0 && <div className="mt-4 border-t border-border pt-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Saved in this review</p><div className="mt-2 space-y-2">{review.submittedQuestions.map((item) => <div key={item} className="rounded-lg bg-background px-3 py-2 text-xs leading-5 text-muted">{item}</div>)}</div></div>}
+      <div className="mt-5 rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold">Optional note for the permanent record</h2>
+            <p className="mt-1 text-xs leading-5 text-subtle">Use this for context you want future readers to see. It does not change the reconstructed evidence.</p>
+          </div>
+          <span className={notesDirty ? "text-[11px] text-warning" : "text-[11px] text-subtle"}>{notesDirty ? "Unsaved" : review.notes ? "Saved" + (review.notesSavedAt ? " · " + savedTime(review.notesSavedAt) : "") : "Optional"}</span>
         </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-medium">Successor notes</h2><span className={`text-[11px] ${notesDirty ? "text-warning" : "text-subtle"}`}>{notesDirty ? "Unsaved changes" : review.notes ? `Saved${review.notesSavedAt ? ` · ${savedTime(review.notesSavedAt)}` : ""}` : "Optional"}</span></div>
-          <p className="mt-1 text-xs leading-5 text-subtle">Saved notes become part of the permanent handoff record under Successor verification. They are not fed back into the evidence reconstruction.</p>
-          <textarea value={notes} onChange={(event) => { setNotes(event.target.value); setNotesDirty(event.target.value !== review.notes); }} onBlur={() => { if (notesDirty) saveNotes(); }} rows={4} placeholder="Optional notes for the handoff record…" className="mt-3 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none" />
-          <button onClick={saveNotes} disabled={!notesDirty} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">{notesDirty ? "Save notes now" : review.notes ? "Notes saved to record" : "No notes to save"}</button>
-        </div>
+        <textarea value={notes} onChange={(event) => { setNotes(event.target.value); setNotesDirty(event.target.value !== review.notes); }} onBlur={() => { if (notesDirty) saveNotes(); }} rows={3} placeholder="Anything worth preserving for the next person after you…" className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm leading-6 outline-none" />
       </div>
 
       <div className="mt-6 rounded-2xl border border-border-strong bg-card p-5 sm:flex sm:items-center sm:justify-between sm:gap-5">
-        <div><p className="text-sm font-medium">Ready to accept the handoff?</p><p className="mt-1 text-xs leading-5 text-subtle">{criticalGaps.length ? `${criticalGaps.length} critical follow-up${criticalGaps.length === 1 ? " still blocks" : "s still block"} acceptance.` : notesDirty ? "Save the successor notes first, then complete the handoff." : !allChecksComplete ? "Confirm each acceptance criterion above before the final handoff acceptance." : "All five criteria are confirmed. You will get one final confirmation before the handoff is completed."}</p></div>
-        <div className="mt-4 flex shrink-0 gap-2 sm:mt-0"><button onClick={requestChanges} className="h-11 rounded-lg border border-border px-4 text-sm font-medium text-muted">Request changes</button><motion.button whileTap={reducedMotion ? undefined : { scale: 0.98 }} onClick={() => setShowAcceptConfirm(true)} disabled={Boolean(criticalGaps.length || notesDirty || !allChecksComplete)} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white disabled:opacity-40">Review & accept</motion.button></div>
+        <div>
+          <p className="text-sm font-semibold">Complete the transfer</p>
+          <p className="mt-1 text-xs leading-5 text-subtle">
+            {criticalGaps.length
+              ? criticalGaps.length + " critical concern" + (criticalGaps.length === 1 ? " still blocks" : "s still block") + " acceptance."
+              : notesDirty
+                ? "Save your note first."
+                : !allChecksComplete
+                  ? "Confirm the remaining " + (SUCCESSOR_REVIEW_CHECKS.length - confirmedCount) + " readiness area" + (SUCCESSOR_REVIEW_CHECKS.length - confirmedCount === 1 ? "" : "s") + " first."
+                  : "Everything is clear enough for " + transition.successor + " to take over."}
+          </p>
+        </div>
+        <motion.button
+          whileTap={reducedMotion ? undefined : { scale: 0.98 }}
+          onClick={() => setShowAcceptConfirm(true)}
+          disabled={Boolean(criticalGaps.length || notesDirty || !allChecksComplete)}
+          className="mt-4 h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white disabled:opacity-40 sm:mt-0"
+        >
+          Accept handoff
+        </motion.button>
       </div>
 
       <AnimatePresence>
-        {showAcceptConfirm && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowAcceptConfirm(false); }}><motion.div initial={reducedMotion ? false : { opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reducedMotion ? undefined : { opacity: 0, y: 12, scale: 0.99 }} transition={{ type: "spring", stiffness: 360, damping: 30 }} className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-xl"><p className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">Final acceptance</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Confirm the transfer?</h2><p className="mt-2 text-sm leading-6 text-muted">By accepting, {transition.successor} finalizes the five criteria already confirmed above and completes the transfer.</p><div className="mt-4 space-y-2">{SUCCESSOR_REVIEW_CHECKS.map((item) => <div key={item.key} className="flex items-start gap-2 rounded-xl bg-background px-3 py-2.5"><span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border text-[10px] text-subtle">✓</span><p className="text-xs leading-5 text-muted">{item.label}</p></div>)}</div><div className="mt-6 flex justify-end gap-2"><button type="button" onClick={() => setShowAcceptConfirm(false)} className="h-10 rounded-lg border border-border px-4 text-sm font-medium text-muted">Not yet</button><button type="button" onClick={confirmAccept} className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white">Accept handoff</button></div></motion.div></motion.div>}
+        {showAcceptConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-end justify-center bg-foreground/20 p-4 backdrop-blur-sm sm:items-center" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowAcceptConfirm(false); }}>
+            <motion.div initial={reducedMotion ? false : { opacity: 0, y: 24, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reducedMotion ? undefined : { opacity: 0, y: 12, scale: 0.99 }} transition={{ type: "spring", stiffness: 360, damping: 30 }} className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-subtle">Final acceptance</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">Confirm that you can take over?</h2>
+              <p className="mt-2 text-sm leading-6 text-muted">This records that {transition.successor}, the next owner, reviewed the transfer and can continue the work. It does not certify performance or require HR approval.</p>
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAcceptConfirm(false)} className="h-10 rounded-lg border border-border px-4 text-sm font-medium text-muted">Not yet</button>
+                <button type="button" onClick={confirmAccept} className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white">Yes, accept handoff</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
