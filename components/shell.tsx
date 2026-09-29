@@ -42,8 +42,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const synced = identity?.provider === "account";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col overflow-hidden border-r border-border bg-sidebar/95 backdrop-blur-xl md:flex">
+    <div className="understudy-app-shell min-h-screen bg-background text-foreground">
+      <aside className="understudy-sidebar fixed inset-y-0 left-0 z-30 hidden w-60 flex-col overflow-hidden border-r border-border bg-sidebar/95 backdrop-blur-xl md:flex">
         <div className="understudy-ambient -left-24 -top-16 h-64 w-64 opacity-30" aria-hidden />
         <div className="relative z-10 flex h-16 items-center px-5">
           <Link href="/" className="flex items-center gap-3 font-medium tracking-[-0.025em]">
@@ -100,7 +100,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <CloudAccountControl compact />
       </header>
 
-      <main className="min-h-screen md:ml-60">{children}</main>
+      <main className="understudy-app-main min-h-screen md:ml-60">{children}</main>
     </div>
   );
 }
