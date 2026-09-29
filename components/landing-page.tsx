@@ -52,7 +52,7 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className="understudy-hero relative mx-auto grid min-h-[78vh] max-w-7xl items-center gap-12 overflow-hidden px-5 py-16 lg:grid-cols-[minmax(0,.92fr)_minmax(520px,1.08fr)] lg:px-8 lg:py-24">
+        <section className="understudy-hero relative mx-auto grid min-h-[78vh] max-w-[1440px] items-center gap-12 overflow-hidden px-5 py-16 lg:grid-cols-[minmax(0,.74fr)_minmax(640px,1.26fr)] lg:px-8 lg:py-24">
           <div className="understudy-ambient -left-32 -top-16 h-[28rem] w-[28rem] opacity-40" aria-hidden />
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 18 }}
@@ -107,29 +107,50 @@ export function LandingPage() {
                     <p className="text-xs text-subtle">Product Manager handoff</p>
                   </div>
                 </div>
-                <span className="rounded-full border border-ok/15 bg-ok/8 px-2.5 py-1 text-[11px] font-medium text-ok">AI connected</span>
+                <span className="rounded-full border border-ok/15 bg-ok/8 px-2.5 py-1 text-[11px] font-medium text-ok">Permanent handoff</span>
               </div>
 
-              <div className="grid gap-0 lg:grid-cols-[180px_minmax(0,1fr)]">
-                <div className="hidden border-r border-border/75 bg-sidebar/55 p-3 lg:block">
-                  {["Collect evidence", "Reconstruction", "Fill gaps", "Successor review"].map((item, index) => (
-                    <div key={item} className={`mb-1 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs ${index === 1 ? "bg-card text-foreground shadow-sm" : "text-subtle"}`}>
-                      <span className={`grid h-5 w-5 place-items-center rounded-full border text-[9px] font-semibold ${index < 1 ? "border-ok/25 bg-ok/10 text-ok" : index === 1 ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-background text-faint"}`}>
-                        {index < 1 ? "✓" : index + 1}
-                      </span>
-                      {item}
-                    </div>
-                  ))}
+              <div className="p-5 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-subtle">Completed handoff · Product Manager</p>
+                    <h2 className="mt-1 text-xl font-semibold tracking-[-0.035em]">Ask the context after Maya has left.</h2>
+                    <p className="mt-1 text-xs leading-5 text-subtle">The permanent record keeps the evidence, human context, decisions, and successor notes together.</p>
+                  </div>
+                  <span className="rounded-full border border-ok/15 bg-ok/8 px-2.5 py-1 text-[11px] font-semibold text-ok">Verified by Priya</span>
                 </div>
 
-                <div className="p-5 sm:p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">Role reconstruction</p>
-                      <h2 className="mt-1 text-xl font-semibold tracking-[-0.035em]">Understudy found the shape of the role.</h2>
-                    </div>
-                    <span className="rounded-full border border-border bg-background/75 px-2.5 py-1 text-[11px] text-subtle">6 sources · 7 loose ends</span>
+                <div className="mt-5 rounded-2xl border border-border bg-background/76 p-4 sm:p-5">
+                  <div className="flex items-center gap-2 text-accent">
+                    <IconAsk className="h-4 w-4" />
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em]">Ask this handoff</p>
                   </div>
+                  <p className="mt-3 text-base font-semibold">Why did we keep manual review in onboarding?</p>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-accent/18 bg-accent-soft/58 p-5 sm:p-6">
+                  <div className="flex items-center gap-2 text-accent"><IconSpark className="h-4 w-4" /><p className="text-sm font-semibold">Understudy</p></div>
+                  <p className="mt-3 text-sm leading-7 text-foreground">Manual review stayed as a fallback for cases where automated verification was inconclusive. It kept onboarding moving without treating a failed check as a hard rejection.</p>
+                  <p className="mt-3 text-xs leading-5 text-subtle">This answer is grounded in the saved handoff, not generated from general company knowledge.</p>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-background/72 p-3.5">
+                    <p className="text-xs font-semibold">Onboarding fallback notes</p>
+                    <p className="mt-1 text-[11px] text-subtle">Primary document · cited</p>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background/72 p-3.5">
+                    <p className="text-xs font-semibold">Decision context</p>
+                    <p className="mt-1 text-[11px] text-subtle">Employee-provided context · cited</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/75 pt-4">
+                  <p className="text-xs text-subtle">The former owner does not need to be around for the answer to still exist.</p>
+                  <span className="shrink-0 rounded-lg border border-border bg-card px-2.5 py-1.5 text-[10px] font-semibold text-muted">2 sources used</span>
+                </div>
+              </div>
+            </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {[
@@ -222,7 +243,7 @@ export function LandingPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link href="/demo" className="rounded-xl border border-white/15 bg-white/8 px-4 py-2.5 text-sm font-semibold text-white">Guided demo</Link>
-                <Link href="/new" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-foreground">Create a handoff <IconChevronRight /></Link>
+                <Link href="/new" data-ui-action="primary" style={{ color: "#ffffff" }} className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold shadow-sm">Create a handoff <IconChevronRight /></Link>
               </div>
             </div>
           </div>
