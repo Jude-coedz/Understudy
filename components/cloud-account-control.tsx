@@ -71,7 +71,7 @@ export function CloudAccountControl({ compact = false }: Props) {
       getIdentity().name;
     return (
       <div className={compact ? "flex items-center gap-2" : "space-y-2"}>
-        <span className="max-w-[180px] truncate text-xs text-muted">{label}</span>
+        <span className="hidden max-w-[180px] truncate text-xs text-muted sm:inline">{label}</span>
         <button
           type="button"
           onClick={() => void signOut()}
