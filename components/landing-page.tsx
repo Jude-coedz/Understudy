@@ -20,14 +20,14 @@ const steps = [
   },
   {
     number: "03",
-    title: "Fill only the gaps",
-    body: "It asks for the rationale, exceptions, and unwritten context the evidence still cannot explain.",
+    title: "Add the human context",
+    body: "The current owner answers only the rationale, exceptions, and unwritten context the evidence cannot explain.",
     icon: IconMessage,
   },
   {
     number: "04",
-    title: "Verify the transfer",
-    body: "The next owner reviews, asks questions, and confirms they can actually continue the work.",
+    title: "Let the next owner verify it",
+    body: "The successor either confirms they can continue or raises a concern that sends the handoff back for clarification.",
     icon: IconCheck,
   },
 ];
