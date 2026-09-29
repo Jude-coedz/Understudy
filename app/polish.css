@@ -290,3 +290,387 @@ main [class*="rounded-xl"][class*="bg-card"] {
   min-height: 220px;
   padding: 22px 24px 28px 70px;
 }
+
+
+/* ==========================================================================
+   Premium SaaS system pass
+   ========================================================================== */
+
+.understudy-marketing-shell,
+.understudy-flow-shell,
+.understudy-library-shell,
+.understudy-workspace-shell,
+.understudy-record-shell,
+.understudy-review-shell,
+.understudy-utility-shell,
+.understudy-demo-shell,
+.understudy-app-shell {
+  position: relative;
+  isolation: isolate;
+  background: transparent !important;
+}
+
+.understudy-topbar {
+  border-color: color-mix(in srgb, var(--border) 76%, transparent) !important;
+  background: color-mix(in srgb, var(--background) 78%, rgba(255,255,255,.64)) !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(255,255,255,.62),
+    0 1px 0 rgba(20,33,38,.025);
+  backdrop-filter: blur(24px) saturate(1.18) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(1.18) !important;
+}
+
+.understudy-topbar::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(44,118,136,.14), transparent);
+}
+
+.understudy-gradient-text {
+  background: linear-gradient(112deg, #17343c 5%, var(--accent) 54%, #4c8c78 105%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.understudy-hero-glow {
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(110,205,217,.18), transparent 34%),
+    radial-gradient(circle at 70% 62%, rgba(96,157,139,.13), transparent 38%);
+  filter: blur(18px);
+}
+
+.understudy-product-frame {
+  isolation: isolate;
+}
+
+.understudy-product-frame::before {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(118deg, transparent 0 32%, rgba(255,255,255,.3) 43%, transparent 53%) -140% 0 / 220% 100% no-repeat;
+  opacity: .45;
+  animation: understudy-frame-sheen 10s ease-in-out infinite;
+}
+
+@keyframes understudy-frame-sheen {
+  0%, 65% { background-position: -150% 0; }
+  82%, 100% { background-position: 160% 0; }
+}
+
+.understudy-feature-card,
+.understudy-form-panel,
+.understudy-handoff-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.understudy-feature-card::after,
+.understudy-form-panel::after,
+.understudy-handoff-row::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,.5), transparent 34%);
+  opacity: .42;
+}
+
+.understudy-feature-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.82),
+    0 1px 2px rgba(20,33,38,.04),
+    0 14px 38px rgba(20,33,38,.045);
+  transition:
+    transform 320ms var(--ease-out),
+    box-shadow 320ms var(--ease-out),
+    border-color 260ms var(--ease-out);
+}
+
+.understudy-feature-card:hover {
+  transform: translateY(-5px);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 8px 18px rgba(20,33,38,.055),
+    0 24px 58px rgba(20,33,38,.075);
+}
+
+.understudy-form-panel {
+  border-color: rgba(255,255,255,.72) !important;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255,255,255,.97), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.9), rgba(251,252,251,.82)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 28px 84px rgba(20,42,50,.105),
+    0 4px 16px rgba(20,42,50,.035) !important;
+  backdrop-filter: blur(24px) saturate(1.12);
+}
+
+.understudy-flow-main {
+  position: relative;
+}
+
+.understudy-flow-main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 360px;
+  height: 360px;
+  left: 50%;
+  top: -70px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(85,174,190,.12), transparent 68%);
+  filter: blur(18px);
+}
+
+.understudy-handoff-row {
+  border-color: color-mix(in srgb, var(--border) 86%, white) !important;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(255,255,255,.92), transparent 34%),
+    rgba(255,255,255,.78) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.9),
+    0 5px 18px rgba(20,33,38,.035) !important;
+  backdrop-filter: blur(18px);
+}
+
+.understudy-handoff-row:hover {
+  transform: translateY(-3px) scale(1.002);
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--border)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.96),
+    0 16px 44px rgba(20,33,38,.085) !important;
+}
+
+/* Shared in-app surfaces */
+.understudy-workspace-shell main [class*="rounded-2xl"][class*="border"],
+.understudy-record-shell main [class*="rounded-2xl"][class*="border"],
+.understudy-review-shell main [class*="rounded-2xl"][class*="border"],
+.understudy-utility-shell main [class*="rounded-2xl"][class*="border"],
+.understudy-demo-shell main [class*="rounded-2xl"][class*="border"],
+.understudy-app-main [class*="rounded-2xl"][class*="border"] {
+  border-color: color-mix(in srgb, var(--border) 84%, white);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 1px 2px rgba(20,33,38,.025),
+    0 10px 30px rgba(20,33,38,.035);
+}
+
+.understudy-workspace-shell main [class*="rounded-2xl"][class*="bg-card"],
+.understudy-record-shell main [class*="rounded-2xl"][class*="bg-card"],
+.understudy-review-shell main [class*="rounded-2xl"][class*="bg-card"],
+.understudy-utility-shell main [class*="rounded-2xl"][class*="bg-card"],
+.understudy-app-main [class*="rounded-2xl"][class*="bg-card"] {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(255,255,255,.96), transparent 34%),
+    rgba(255,255,255,.82) !important;
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+
+.understudy-workspace-canvas {
+  position: relative;
+}
+
+.understudy-workspace-canvas::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 8px 4% auto;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(ellipse, rgba(89,168,181,.075), transparent 70%);
+  filter: blur(26px);
+}
+
+/* Sidebar behaves like quiet navigation, not a competing panel. */
+.understudy-sidebar {
+  border-color: rgba(20,33,38,.055) !important;
+  background:
+    linear-gradient(180deg, rgba(243,246,245,.93), rgba(237,241,239,.9)) !important;
+  box-shadow:
+    inset -1px 0 0 rgba(255,255,255,.72),
+    12px 0 42px rgba(20,33,38,.025);
+  backdrop-filter: blur(26px) saturate(1.08) !important;
+}
+
+.understudy-sidebar nav a {
+  border: 1px solid transparent;
+}
+
+.understudy-sidebar nav a:hover {
+  background: rgba(255,255,255,.64) !important;
+  border-color: rgba(255,255,255,.72);
+}
+
+.understudy-sidebar nav a[class*="bg-accent-soft"] {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.72), rgba(255,255,255,.35)) !important;
+  border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),
+    0 4px 14px rgba(20,33,38,.035);
+}
+
+/* Form fields should feel deliberate and expensive. */
+input,
+textarea,
+select {
+  border-color: color-mix(in srgb, var(--border) 92%, white);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(252,253,252,.92)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.94),
+    0 1px 2px rgba(20,33,38,.025);
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border-strong));
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 8%, transparent),
+    0 6px 18px rgba(20,33,38,.045);
+}
+
+/* Workspace stage rail */
+.understudy-workspace-shell [class*="sm:grid-cols-4"] > button {
+  border: 1px solid transparent;
+  min-height: 76px !important;
+  transition:
+    transform 260ms var(--ease-out),
+    border-color 260ms var(--ease-out),
+    background-color 260ms var(--ease-out);
+}
+
+.understudy-workspace-shell [class*="sm:grid-cols-4"] > button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.46);
+}
+
+/* Records and review should feel archival, not dashboard-y. */
+.understudy-record-shell main,
+.understudy-review-shell main,
+.understudy-library-shell main,
+.understudy-utility-shell main {
+  position: relative;
+}
+
+.understudy-record-shell main::before,
+.understudy-review-shell main::before,
+.understudy-library-shell main::before,
+.understudy-utility-shell main::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 380px;
+  height: 260px;
+  right: 5%;
+  top: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(86,166,180,.07), transparent 68%);
+  filter: blur(24px);
+}
+
+/* Polished status pills */
+[class*="rounded-full"][class*="bg-ok"],
+[class*="rounded-full"][class*="bg-warning"],
+[class*="rounded-full"][class*="bg-danger"],
+[class*="rounded-full"][class*="bg-accent"] {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+/* Loading states should shimmer like a real product, not flash a gray box. */
+.animate-pulse {
+  position: relative;
+  overflow: hidden;
+  animation: understudy-soft-pulse 1.7s ease-in-out infinite !important;
+}
+
+.animate-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 28%, rgba(255,255,255,.72) 45%, transparent 62%);
+  transform: translateX(-100%);
+  animation: understudy-skeleton-sheen 1.65s ease-in-out infinite;
+}
+
+@keyframes understudy-soft-pulse {
+  0%, 100% { opacity: .72; }
+  50% { opacity: 1; }
+}
+
+@keyframes understudy-skeleton-sheen {
+  0% { transform: translateX(-110%); }
+  70%, 100% { transform: translateX(110%); }
+}
+
+/* Premium modal/dialog depth */
+[role="dialog"] {
+  box-shadow:
+    0 36px 110px rgba(12,28,34,.18),
+    0 8px 30px rgba(12,28,34,.08) !important;
+}
+
+/* Small tactile details */
+[data-ui-action="primary"] {
+  min-height: 38px;
+}
+
+[data-ui-action="primary"]:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -1px 0 rgba(5,25,35,.22),
+    0 5px 12px rgba(20,55,70,.12),
+    0 18px 42px color-mix(in srgb, var(--accent) 24%, transparent) !important;
+}
+
+main h1,
+main h2,
+main h3 {
+  text-wrap: balance;
+}
+
+main p {
+  text-wrap: pretty;
+}
+
+@media (max-width: 767px) {
+  .understudy-product-frame {
+    border-radius: 22px;
+  }
+
+  .understudy-topbar {
+    background: color-mix(in srgb, var(--background) 88%, white) !important;
+  }
+
+  .understudy-handoff-row:hover,
+  .understudy-feature-card:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .understudy-product-frame::before,
+  .animate-pulse::after {
+    animation: none !important;
+  }
+}
