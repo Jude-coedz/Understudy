@@ -21,6 +21,7 @@ type Props = {
   workspace: PersonalWorkspace;
   onWorkspaceChange: (workspace: PersonalWorkspace) => void;
   onMessage: (message: string) => void;
+  onComplete?: () => void;
 };
 
 function mergeUnique<T>(existing: T[], incoming: T[], key: (item: T) => string, limit = 12) {
@@ -107,7 +108,7 @@ const DISPOSITIONS: Array<{ value: InterviewGapDisposition; label: string; detai
   { value: "deferred", label: "Come back later", detail: "Move it behind the other active questions." },
 ];
 
-export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Props) {
+export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onComplete }: Props) {
   const reducedMotion = useReducedMotion();
   const transition = workspace.transition;
   const states = workspace.interviewGapStates ?? {};
@@ -196,7 +197,8 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
     if (blocking.length || focus.length) return;
     const now = new Date().toISOString();
     onWorkspaceChange({ ...workspace, updatedAt: now, interviewCompletedAt: now });
-    onMessage(parked.length ? `Gap review finished with ${parked.length} visible follow-up${parked.length === 1 ? "" : "s"}.` : "Gap review complete. The handoff can now move to verification.");
+    onMessage(parked.length ? `Context review finished with ${parked.length} open follow-up${parked.length === 1 ? "" : "s"} kept visible in the handoff.` : "Context complete. Building the handoff draft.");
+    onComplete?.();
   }
 
   async function submitAnswer() {
