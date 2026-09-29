@@ -19,7 +19,7 @@ export function FocusedUtilityShell({
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2">
             <Link href="/handoffs" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">My handoffs</Link>
-            <Link href={backHref} className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">{backLabel}</Link>
+            <Link href={backHref} className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">{backLabel}</Link>
             <CloudAccountControl compact />
           </div>
         </div>
