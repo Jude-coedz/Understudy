@@ -256,6 +256,11 @@ export function SuccessorReviewPanelV2() {
         </div>
       </div>
 
+      {review.status === "changes-requested" && workspace.interviewCompletedAt && (
+        <div className="mt-5 rounded-xl border border-ok/20 bg-ok/5 px-4 py-3 text-sm leading-6 text-muted">
+          <strong className="font-semibold text-foreground">{transition.person} resolved the missing context.</strong> Continue your readiness check from where you left off.
+        </div>
+      )}
       {message && <div className="mt-5 rounded-xl border border-border bg-card px-4 py-3 text-sm leading-6 text-muted" role="status">{message}</div>}
 
       <div className="mt-6 flex items-center justify-between gap-4">
