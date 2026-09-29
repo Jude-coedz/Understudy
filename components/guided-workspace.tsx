@@ -551,7 +551,7 @@ export function GuidedWorkspace() {
   }, [transition, openHandoffGaps]);
 
   if (!loaded) {
-    return <div className="min-h-screen bg-background text-foreground"><div className="mx-auto max-w-3xl px-5 py-24 text-center"><motion.div animate={reducedMotion ? undefined : { opacity: [0.3, 1, 0.3], scaleX: [0.75, 1, 0.75] }} transition={{ repeat: Infinity, duration: 1.25 }} className="mx-auto h-1.5 w-28 rounded-full bg-accent" /><p className="mt-4 text-sm text-subtle">Opening this handoff…</p></div></div>;
+    return <div className="understudy-workspace-shell min-h-screen bg-background text-foreground"><div className="mx-auto max-w-3xl px-5 py-24 text-center"><motion.div animate={reducedMotion ? undefined : { opacity: [0.3, 1, 0.3], scaleX: [0.75, 1, 0.75] }} transition={{ repeat: Infinity, duration: 1.25 }} className="mx-auto h-1.5 w-28 rounded-full bg-accent" /><p className="mt-4 text-sm text-subtle">Opening this handoff…</p></div></div>;
   }
 
   if (!workspace || !transition) {
@@ -565,7 +565,7 @@ export function GuidedWorkspace() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
+      <header className="understudy-topbar sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/" aria-label="Understudy home"><UnderstudyMark size={32} /></Link>
@@ -578,7 +578,7 @@ export function GuidedWorkspace() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-5xl px-5 pb-20 pt-7 lg:px-8 lg:pt-10">
+      <div className="understudy-workspace-canvas mx-auto max-w-5xl px-5 pb-20 pt-7 lg:px-8 lg:pt-10">
         <div className="mb-8">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Step {currentIndex + 1} of 4</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-4">
