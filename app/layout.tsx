@@ -17,9 +17,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Understudy — Work handoff intelligence",
+  title: "Understudy — Handoffs someone can actually continue",
   description:
-    "AI-powered work handoffs that reconstruct ownership, preserve context, and prepare the next person to continue the work.",
+    "Understudy reconstructs an employee's work from existing evidence, finds missing context, and turns it into a successor-verified handoff.",
+  openGraph: {
+    title: "Understudy — Handoffs someone can actually continue",
+    description:
+      "Reconstruct the work, capture what only the employee knows, and verify that the next owner can continue.",
+    siteName: "Understudy",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Understudy — Handoffs someone can actually continue",
+    description:
+      "Reconstruct the work, capture what only the employee knows, and verify that the next owner can continue.",
+  },
 };
 
 export default function RootLayout({
