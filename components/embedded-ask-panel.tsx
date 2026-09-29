@@ -127,7 +127,7 @@ export function EmbeddedAskPanel({
         throw new Error("Understudy received an invalid answer payload.");
       }
       setAnswer(payload);
-      if (!payload.usedModel) {
+      if (!payload.usedModel && payload.modelStatus) {
         const copy = modelStatusCopy(payload.modelStatus);
         setNotice(`${copy.title}. ${copy.body}`);
       }
