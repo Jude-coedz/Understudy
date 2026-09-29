@@ -14,8 +14,8 @@ const STEPS: Array<{ key: DemoStep; label: string; title: string; body: string; 
     key: "collect",
     label: "01 · Collect",
     title: "Start with the work that already exists.",
-    body: "Understudy keeps every source separate first: PRDs, roadmaps, GitHub activity, Drive files, and recovered AI context. Nothing is treated as the whole truth on its own.",
-    why: "The handoff should begin with evidence, not a blank questionnaire.",
+    body: "Understudy starts with the work that already exists, then lets the employee add the context only they can explain: responsibilities, recurring work, exceptions, and why things were done a certain way.",
+    why: "The handoff should begin with evidence, then use human time for the context the evidence cannot carry.",
   },
   {
     key: "reconstruct",
@@ -74,7 +74,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
 
       <header className="relative z-20 border-b border-white/30 bg-background/70 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
-          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-foreground text-xs font-semibold text-background">U</span>Understudy</Link>
+          <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2"><span className="hidden rounded-full border border-accent/15 bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent sm:inline-flex">Guided demo · fictional data</span><Link href="/new" className="rounded-lg bg-foreground px-3.5 py-2 text-xs font-medium text-background">Try the real product</Link></div>
         </div>
       </header>
@@ -110,6 +110,10 @@ export function ProductDemo({ transition }: { transition: Transition }) {
               {step.key === "collect" && <motion.div key="collect" initial={reducedMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
                 <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-2xl border border-border bg-background/70 p-4"><p className="text-2xl font-semibold">{evidence.length}</p><p className="mt-1 text-xs text-subtle">evidence sources</p></div><div className="rounded-2xl border border-border bg-background/70 p-4"><p className="text-2xl font-semibold">{primary.length}</p><p className="mt-1 text-xs text-subtle">primary sources</p></div><div className="rounded-2xl border border-accent/20 bg-accent-soft p-4"><p className="text-2xl font-semibold text-accent">{aiContext.length}</p><p className="mt-1 text-xs text-subtle">AI-recovered source</p></div></div>
                 <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background/60">{evidence.map((source, sourceIndex) => <motion.div key={source.id} initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: sourceIndex * 0.05 }} className={`flex items-center gap-3 p-4 ${sourceIndex ? "border-t border-border" : ""}`}><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${source.kind === "ai-context" ? "bg-accent-soft text-accent" : "bg-card text-muted"}`}>{source.kind === "ai-context" ? <IconSpark /> : <IconFile />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{source.title}</p><p className="mt-0.5 text-xs text-subtle">{source.provider} · {source.confidence}</p></div>{source.kind === "ai-context" && <span className="rounded-full bg-accent-soft px-2 py-1 text-[11px] font-medium text-accent">Included with documents</span>}</motion.div>)}</div>
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-border bg-background/55 p-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><IconSpark /></span>
+                  <div><p className="text-sm font-medium">Then add what only the employee knows.</p><p className="mt-1 text-xs leading-5 text-subtle">They can type or dictate how the role really worked. Understudy stores it as self-reported context and checks it against the rest of the evidence.</p></div>
+                </div>
               </motion.div>}
 
               {step.key === "reconstruct" && <motion.div key="reconstruct" initial={reducedMotion ? false : { opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}>
