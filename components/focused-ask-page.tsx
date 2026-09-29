@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { UnderstudyMark } from "./understudy-mark";
 import { CloudAccountControl } from "./cloud-account-control";
 import { AskView } from "./ask-view";
 
 export function FocusedAskPage() {
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") === "/review" ? "/review" : "";
+  const [returnTo, setReturnTo] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setReturnTo(params.get("returnTo") === "/review" ? "/review" : "");
+  }, []);
+
   const returnLabel = returnTo ? "Back to successor review" : "Back to handoff";
 
   return (
