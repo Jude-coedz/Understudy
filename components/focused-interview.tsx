@@ -144,8 +144,106 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
   useEffect(() => {
     if (!focus.length) {
+      setSelectedQuestion("");
+      return;
+    }
+    if (!focus.some((gap) => gap.question === selectedQuestion)) {
+      setSelectedQuestion(focus[0].question);
+      setAnswer("");
+      setUsedVoice(false);
+      setShowExceptions(false);
+      setShowEvidence(false);
+    }
+  }, [focus, selectedQuestion]);
+
+  const current = focus.find((gap) => gap.question === selectedQuestion) ?? focus[0];
+  const currentIndex = current ? focus.findIndex((gap) => gap.question === current.question) : -1;
+  const minutes = estimatedInterviewMinutes(focus.length);
+  const references = useMemo(
+    () => current ? relatedSourcesForGap(workspace, current, 3) : [],
+    [workspace, current],
+  );
+  const previewSource = transition.sources.find((source) => source.id === previewSourceId) ?? null;
+  const modelBackedReview = workspace.roleEvidence?.usedModel !== false;
+
+  function chooseDisposition(status: InterviewGapDisposition) {
+    if (!current) return;
+    const nextQuestion = focus.find((gap) => gap.question !== current.question)?.question ?? "";
+    onWorkspaceChange({
+      ...workspace,
+      updatedAt: new Date().toISOString(),
+      interviewCompletedAt: undefined,
+      interviewGapStates: { ...states, [current.question]: { status, updatedAt: new Date().toISOString() } },
+    });
+    setSelectedQuestion(nextQuestion);
+    setAnswer("");
+    setUsedVoice(false);
+    setShowExceptions(false);
+    setShowEvidence(false);
+    onMessage(status === "not-relevant" ? "Question removed as not relevant." : status === "ask-someone" ? "Marked as a follow-up for someone else." : status === "unknown" ? "Kept as an unresolved follow-up. It will not disappear from the handoff." : "Moved behind the other active questions.");
+  }
+
+  function restoreQuestion(question: string) {
+    const nextStates = { ...states };
+    delete nextStates[question];
+    onWorkspaceChange({ ...workspace, updatedAt: new Date().toISOString(), interviewCompletedAt: undefined, interviewGapStates: nextStates });
+    setSelectedQuestion(question);
+    setAnswer("");
+    setUsedVoice(false);
+  }
+
+  function finishGapReview() {
+    if (blocking.length || focus.length) return;
+    const now = new Date().toISOString();
+    onWorkspaceChange({ ...workspace, updatedAt: now, interviewCompletedAt: now });
+    onMessage(parked.length ? `Gap review finished with ${parked.length} visible follow-up${parked.length === 1 ? "" : "s"}.` : "Gap review complete. The handoff can now move to verification.");
+  }
+
+  async function submitAnswer() {
+    if (!current || !answer.trim() || busy || voiceListening) return;
+    setBusy(true);
+    onMessage("");
+    try {
+      const response = await fetch("/api/reconstruct", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transition: {
+            person: transition.person,
+            role: transition.role,
+            department: transition.department,
+            successor: transition.successor,
+            targetDate: transition.targetDate,
+          },
+          source: {
+            title: `Handoff interview · ${current.topic}`,
+            text: answer.trim(),
+            provider: usedVoice ? "Understudy interview · voice" : "Understudy interview",
+            kind: "interview",
+          },
+          openGaps: transition.gaps,
+          primaryQuestion: current.question,
+        }),
+      });
+      const payload = (await response.json()) as { result?: ReconstructionResult; error?: string };
+      if (!response.ok || !payload.result) throw new Error(payload.error || "Could not process this answer.");
+      const next = mergeInterviewResult(workspace, payload.result, answer.trim());
+      onWorkspaceChange(next);
+      setAnswer("");
+      setUsedVoice(false);
+      setSelectedQuestion("");
+      setShowExceptions(false);
+      setShowEvidence(false);
+      onMessage(payload.result.resolvedQuestions.length > 1 ? `Answer saved. It resolved ${payload.result.resolvedQuestions.length} related gaps.` : "Answer saved. Understudy is checking what remains.");
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Interview answer failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!focus.length) {
     const hasCriticalFollowUp = blocking.length > 0;
-    const done = !hasCriticalFollowUp && !parked.length;
     return (
       <motion.div
         initial={reducedMotion ? false : { opacity: 0, y: 10 }}
@@ -170,16 +268,15 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
               </h2>
               <p className="mt-3 text-sm leading-6 text-muted">
                 {hasCriticalFollowUp
-                  ? "This question affects continuity, so marking it as unknown does not make it disappear. Bring it back when the right person can answer it."
+                  ? "This affects continuity, so marking it as unknown does not make it disappear. Bring it back when the right person can answer it."
                   : parked.length
                     ? `The remaining ${parked.length} follow-up${parked.length === 1 ? "" : "s"} will stay visible for the successor. They are not being treated as resolved.`
                     : "There are no more active context questions. Finish this step and Understudy will assemble the handoff for successor review."}
               </p>
             </div>
-
             {!hasCriticalFollowUp && (
-              <div className="min-w-[170px] rounded-2xl border border-border bg-card/80 p-4 text-left shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">What happens next</p>
+              <div className="min-w-[180px] rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">Next</p>
                 <p className="mt-2 text-sm font-semibold">Handoff draft</p>
                 <p className="mt-1 text-xs leading-5 text-subtle">Role summary, active work, risks, your answers, and source evidence.</p>
               </div>
@@ -191,7 +288,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
             <div className="border-b border-border px-5 py-4">
               <p className="text-sm font-semibold">Follow-ups that stay open</p>
-              <p className="mt-1 text-xs text-subtle">These remain visible in the final handoff so the next owner knows what still needs an answer.</p>
+              <p className="mt-1 text-xs text-subtle">These remain visible so the successor knows what still needs an answer.</p>
             </div>
             <div className="divide-y divide-border">
               {parked.map((gap) => (
@@ -209,14 +306,14 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
         {!hasCriticalFollowUp && !workspace.interviewCompletedAt && (
           <button onClick={finishGapReview} className="primary-action-depth inline-flex h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white">
-            {parked.length ? `Finish with ${parked.length} open follow-up${parked.length === 1 ? "" : "s"}` : done ? "Build the handoff" : "Finish context review"}
+            {parked.length ? `Finish with ${parked.length} open follow-up${parked.length === 1 ? "" : "s"}` : "Build the handoff"}
           </button>
         )}
 
         {workspace.interviewCompletedAt && (
           <div className="flex items-center gap-3 rounded-xl border border-ok/20 bg-ok/5 px-4 py-3 text-sm text-muted">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-4 w-4" /></span>
-            <span><strong className="font-semibold text-foreground">Context review complete.</strong> Continue to the handoff draft below.</span>
+            <span><strong className="font-semibold text-foreground">Context review complete.</strong> Open the handoff draft when you are ready.</span>
           </div>
         )}
       </motion.div>
@@ -285,11 +382,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
               {references.length > 0 && (
                 <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowEvidence((value) => !value)}
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-accent"
-                  >
+                  <button type="button" onClick={() => setShowEvidence((value) => !value)} className="inline-flex items-center gap-2 text-xs font-semibold text-accent">
                     <IconFile className="h-3.5 w-3.5" />
                     {showEvidence ? "Hide related evidence" : `See the ${references.length} related source${references.length === 1 ? "" : "s"}`}
                   </button>
@@ -324,13 +417,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
                   className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
                 />
                 <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                  <VoiceInput
-                    value={answer}
-                    onChange={setAnswer}
-                    onListeningChange={setVoiceListening}
-                    onVoiceUsed={() => setUsedVoice(true)}
-                    disabled={busy}
-                  />
+                  <VoiceInput value={answer} onChange={setAnswer} onListeningChange={setVoiceListening} onVoiceUsed={() => setUsedVoice(true)} disabled={busy} />
                   <span className="text-xs text-faint">{usedVoice ? "Voice captured. Edit anything before saving." : "Type it or dictate it."}</span>
                 </div>
               </div>
@@ -391,16 +478,9 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
         )}
       </AnimatePresence>
 
-      {ranked.length > focus.length && (
-        <p className="mt-4 text-center text-xs leading-5 text-faint">Understudy is holding back {ranked.length - focus.length} lower-priority question{ranked.length - focus.length === 1 ? "" : "s"} so this stays focused.</p>
-      )}
+      {ranked.length > focus.length && <p className="mt-4 text-center text-xs leading-5 text-faint">Understudy is holding back {ranked.length - focus.length} lower-priority question{ranked.length - focus.length === 1 ? "" : "s"} so this stays focused.</p>}
 
-      <SourcePreviewDialog
-        source={previewSource}
-        body={previewSource ? workspace.sourceBodies[previewSource.id] ?? "" : ""}
-        onClose={() => setPreviewSourceId("")}
-        title="Related evidence"
-      />
+      <SourcePreviewDialog source={previewSource} body={previewSource ? workspace.sourceBodies[previewSource.id] ?? "" : ""} onClose={() => setPreviewSourceId("")} title="Related evidence" />
     </div>
   );
 }
