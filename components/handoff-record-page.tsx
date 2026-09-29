@@ -45,8 +45,8 @@ export function HandoffRecordPage() {
   const evidence = transition.sources.filter((source) => source.kind !== "interview" || source.provider === "Employee context");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
+    <div className="understudy-record-shell min-h-screen bg-background text-foreground">
+      <header className="understudy-topbar sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2">
