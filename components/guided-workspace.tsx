@@ -39,7 +39,7 @@ type AnalysisProgress = { current: number; total: number; name: string; phase: n
 const STAGES: Array<{ key: Stage; plain: string; product: string }> = [
   { key: "sources", plain: "Collect", product: "Evidence" },
   { key: "map", plain: "Understand", product: "Reconstruction" },
-  { key: "interview", plain: "Fill the gaps", product: "Interview" },
+  { key: "interview", plain: "Close gaps", product: "Human context" },
   { key: "handoff", plain: "Hand over", product: "Verification" },
 ];
 
@@ -662,9 +662,9 @@ export function GuidedWorkspace() {
 
           {stage === "interview" && (
             <section className="mx-auto max-w-3xl">
-              <div className="max-w-2xl"><h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Fill only the gaps that matter.</h1><p className="mt-3 text-base leading-7 text-muted">Understudy asks only about unresolved gaps found after comparing the full evidence set. It prioritizes criticality, continuity risk, and weakly supported areas. Your answers are saved into this handoff as self-reported evidence and can resolve this question or related gaps.</p></div>
+              <div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">Close the missing context</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Understudy found what the evidence still can’t explain.</h1><p className="mt-3 text-base leading-7 text-muted">Answer only the remaining questions a successor would otherwise have to figure out after you leave. Understudy already handled the rest.</p></div>
               <div className="mt-7"><AdaptiveInterview workspace={workspace} onWorkspaceChange={persist} onMessage={setMessage} /></div>
-              <div className="mt-7 flex items-center justify-between"><button onClick={() => go("map")} className="text-sm font-medium text-subtle">← Back to reconstruction</button>{workspace.interviewCompletedAt && <button onClick={() => go("handoff")} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white">Continue to handoff verification <IconChevronRight className="ml-1 inline" /></button>}</div>
+              <div className="mt-7 flex items-center justify-between"><button onClick={() => go("map")} className="text-sm font-medium text-subtle">← Back to reconstruction</button>{workspace.interviewCompletedAt && <button onClick={() => go("handoff")} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white">Open handoff draft <IconChevronRight className="ml-1 inline" /></button>}</div>
             </section>
           )}
 
