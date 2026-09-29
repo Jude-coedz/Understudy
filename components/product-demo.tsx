@@ -320,7 +320,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                       </div>
                       <div className="flex gap-2">
                         <SmallTag>3 left</SmallTag>
-                        <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">1 critical</span>
+                        <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">1 blocking</span>
                       </div>
                     </div>
                   </div>
@@ -335,7 +335,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
 
                   <div className="mt-4 rounded-2xl border border-border bg-background/72 p-5 sm:p-6">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">Important for continuity</span>
+                      <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">Blocks handoff</span>
                       <span className="text-[11px] text-subtle">Refund policy</span>
                     </div>
                     <h3 className="mt-4 text-xl font-semibold tracking-[-0.03em]">What are the common exceptions to the refund policy?</h3>
