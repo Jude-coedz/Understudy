@@ -149,7 +149,8 @@ export function GithubEvidenceImport() {
     return (
       <div className="mx-auto max-w-2xl px-6 py-16 text-center">
         <h1 className="text-2xl font-semibold">Create a handoff first</h1>
-        <p className="mt-2 text-sm text-muted">GitHub evidence is imported into the currently selected transition.</p>
+        <p className="mt-2 text-sm text-muted">GitHub evidence belongs to one specific handoff so repository activity never gets mixed between people.</p>
+        <a href="/new" className="mt-5 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white">Create a handoff</a>
       </div>
     );
   }
@@ -172,7 +173,7 @@ export function GithubEvidenceImport() {
             <input value={repository} onChange={(event) => { setRepository(event.target.value); setPreview(null); }} placeholder="owner/repository or https://github.com/owner/repository" className="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none placeholder:text-faint" />
             <label className="mt-5 block text-sm font-medium">Contributor username <span className="font-normal text-subtle">optional</span></label>
             <input value={contributor} onChange={(event) => { setContributor(event.target.value); setPreview(null); }} placeholder="e.g. Jude-coedz" className="mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none placeholder:text-faint" />
-            <p className="mt-2 text-xs leading-5 text-subtle">Step 11 intentionally starts with public repositories. Private-repository authorization needs a GitHub App/OAuth permission model rather than asking users for personal access tokens.</p>
+            <p className="mt-2 text-xs leading-5 text-subtle">Public repositories work immediately. Private repository access is intentionally unavailable in this POC until Understudy can use a proper GitHub App permission flow.</p>
             <button onClick={() => void inspect()} disabled={!repository.trim() || busy} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-background disabled:opacity-40"><IconGithub /> {busy ? "Reading GitHub…" : "Inspect repository"}</button>
           </div>
 
