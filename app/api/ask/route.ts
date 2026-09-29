@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { completeJson } from "@/lib/llm";
+import { completeJsonDetailed } from "@/lib/llm";
+import type { ModelStatus } from "@/lib/model-status";
 import { answerWorkspaceMetadata } from "@/lib/workspace-metadata-answer";
 import {
   WORKSPACE_ASK_SYSTEM,
@@ -9,9 +10,19 @@ import {
   type WorkspaceAskResponse,
 } from "@/lib/workspace-ask";
 
+type RetrievedEvidence = {
+  sourceId: string;
+  title: string;
+  provider: string;
+  kind: string;
+  excerpt: string;
+  text: string;
+};
+
 type AskBody = {
   question?: string;
   context?: WorkspaceAskContext;
+  retrievedEvidence?: RetrievedEvidence[];
 };
 
 type ModelAnswer = {
@@ -46,7 +57,24 @@ export async function POST(req: Request) {
   const metadataAnswer = answerWorkspaceMetadata(question, context);
   if (metadataAnswer) return NextResponse.json(metadataAnswer);
 
-  const chunks = retrieveWorkspaceEvidence(question, context);
+  const clientEvidence = Array.isArray(body.retrievedEvidence)
+    ? body.retrievedEvidence
+        .filter((item) => item?.sourceId && item?.title && item?.text)
+        .slice(0, 8)
+    : [];
+
+  const chunks = clientEvidence.length
+    ? clientEvidence.map((item, index) => ({
+        sourceId: item.sourceId,
+        title: item.title,
+        provider: item.provider,
+        kind: item.kind,
+        excerpt: item.excerpt || item.text.slice(0, 320),
+        text: item.text.slice(0, 2200),
+        score: 100 - index,
+      }))
+    : retrieveWorkspaceEvidence(question, context);
+
   const fallback = fallbackWorkspaceAnswer(question, context, chunks);
   if (!chunks.length) return NextResponse.json(fallback);
 
@@ -73,16 +101,28 @@ export async function POST(req: Request) {
     sourceTitles: context.sources.filter((source) => source.kind !== "interview").map((source) => source.title),
   };
 
-  const llm = await completeJson<ModelAnswer>(
+  const llm = await completeJsonDetailed<ModelAnswer>(
     WORKSPACE_ASK_SYSTEM,
     `Question:\n${question}\n\nTransition metadata:\n${JSON.stringify(transitionMetadata, null, 2)}\n\nRetrieved workspace evidence:\n${JSON.stringify(evidence, null, 2)}`,
+    {
+      timeoutMs: 30_000,
+      maxOutputTokens: 1_800,
+      temperature: 0.15,
+    },
   );
 
-  if (!llm) return NextResponse.json(fallback);
+  if (!llm.data) {
+    return NextResponse.json({
+      ...fallback,
+      modelStatus: llm.status,
+    });
+  }
+
+  const model = llm.data;
 
   const availableIds = new Set(chunks.map((chunk) => chunk.sourceId));
-  const citationIds = Array.isArray(llm.citationIds)
-    ? [...new Set(llm.citationIds.filter((id): id is string => typeof id === "string" && availableIds.has(id)))]
+  const citationIds = Array.isArray(model.citationIds)
+    ? [...new Set(model.citationIds.filter((id): id is string => typeof id === "string" && availableIds.has(id)))]
     : [];
 
   const citations = citationIds
@@ -90,9 +130,9 @@ export async function POST(req: Request) {
     .filter((chunk): chunk is (typeof chunks)[number] => Boolean(chunk))
     .map(({ sourceId, title, provider, kind, excerpt }) => ({ sourceId, title, provider, kind, excerpt }));
 
-  const unknown = Boolean(llm.unknown);
-  const answer = (llm.answer ?? "").trim();
-  const gap = typeof llm.gap === "string" && llm.gap.trim() ? llm.gap.trim() : null;
+  const unknown = Boolean(model.unknown);
+  const answer = (model.answer ?? "").trim();
+  const gap = typeof model.gap === "string" && model.gap.trim() ? model.gap.trim() : null;
 
   if (!unknown && (!answer || !citations.length)) {
     return NextResponse.json({
@@ -112,5 +152,6 @@ export async function POST(req: Request) {
     gap: unknown ? gap || "The current evidence does not answer this clearly enough." : null,
     citations: unknown ? citations : citations.slice(0, 5),
     usedModel: true,
-  } satisfies WorkspaceAskResponse);
+    modelStatus: llm.status,
+  } satisfies WorkspaceAskResponse & { modelStatus: ModelStatus });
 }
