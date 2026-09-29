@@ -66,11 +66,11 @@ export function SuccessorReviewPanelV2() {
     const raisedDuringReview = followups.length > 0;
     return (
       <div className="mx-auto max-w-2xl px-5 py-16 text-center">
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-warning">{raisedDuringReview ? "Successor follow-up saved" : "Gap review not finished"}</p>
-        <h1 className="mt-2 text-2xl font-semibold">{raisedDuringReview ? "The handoff has reopened." : "Finish Step 3 first."}</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">{raisedDuringReview ? "The question you raised is stored in the successor review and has also become a blocking open question in Step 3. It must be addressed before acceptance." : "Successor verification is the final step, not a shortcut around unresolved handoff context."}</p>
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-warning">{raisedDuringReview ? "Successor follow-up saved" : "Missing context still open"}</p>
+        <h1 className="mt-2 text-2xl font-semibold">{raisedDuringReview ? "The handoff has reopened." : "Finish the missing context first."}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">{raisedDuringReview ? "The question you raised is stored in the successor review and has also become a blocking open question in the context review. It must be addressed before acceptance." : "Successor verification is the final step, not a shortcut around unresolved handoff context."}</p>
         {raisedDuringReview && <div className="mx-auto mt-5 max-w-lg rounded-xl border border-border bg-card p-4 text-left"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Latest follow-up</p><p className="mt-2 text-sm leading-6 text-muted">{followups[followups.length - 1]}</p></div>}
-        <Link href="/workspace" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">{raisedDuringReview ? "Resolve it in Step 3" : "Back to gap review"} <IconChevronRight /></Link>
+        <Link href="/workspace" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">{raisedDuringReview ? "Resolve missing context" : "Back to missing context"} <IconChevronRight /></Link>
       </div>
     );
   }
@@ -237,9 +237,9 @@ export function SuccessorReviewPanelV2() {
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         <div className="rounded-2xl border border-border bg-card p-5">
           <h2 className="text-sm font-medium">Raise a follow-up</h2>
-          <p className="mt-1 text-xs leading-5 text-subtle">This field creates a question, not an answer. Saving it adds the question to this review and to the handoff&apos;s open gaps, then reopens Step 3 so the current owner can answer it.</p>
+          <p className="mt-1 text-xs leading-5 text-subtle">This field creates a question, not an answer. Saving it adds the question to this review and to the handoff&apos;s open gaps, then reopens the context review so the current owner can answer it.</p>
           <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="What must be clarified before you take ownership?" className="mt-3 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" />
-          <button onClick={submitQuestion} disabled={!question.trim()} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">Save follow-up and reopen Step 3</button>
+          <button onClick={submitQuestion} disabled={!question.trim()} className="mt-2 h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted disabled:opacity-40">Save follow-up and reopen the context review</button>
           {review.submittedQuestions.length > 0 && <div className="mt-4 border-t border-border pt-3"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Saved in this review</p><div className="mt-2 space-y-2">{review.submittedQuestions.map((item) => <div key={item} className="rounded-lg bg-background px-3 py-2 text-xs leading-5 text-muted">{item}</div>)}</div></div>}
         </div>
 
