@@ -1,3 +1,5 @@
+import type { ModelStatus } from "@/lib/model-status";
+
 export type WorkspaceAskSource = {
   id: string;
   title: string;
@@ -37,6 +39,7 @@ export type WorkspaceAskResponse = {
   gap: string | null;
   citations: WorkspaceAskCitation[];
   usedModel: boolean;
+  modelStatus?: ModelStatus;
 };
 
 type EvidenceChunk = WorkspaceAskCitation & {
