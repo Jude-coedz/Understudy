@@ -16,11 +16,24 @@ import { IconCheck, IconChevronRight, IconPlus } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
 import { CloudAccountControl } from "./cloud-account-control";
 
+function reconstructionReviewed(workspace: PersonalWorkspace) {
+  const reviewableSources = workspace.transition.sources.filter(
+    (source) =>
+      source.kind !== "interview" ||
+      source.provider === "Source clarification" ||
+      source.provider === "Employee context",
+  );
+  return Boolean(
+    reviewableSources.length &&
+    reviewableSources.every((source) => workspace.reviewedSourceIds.includes(source.id)),
+  );
+}
+
 function statusFor(workspace: PersonalWorkspace) {
   const critical = blockingCriticalGaps(workspace.transition.gaps, workspace.interviewGapStates ?? {});
   if (!workspace.evidenceCollectionComplete || !workspace.roleEvidence) return "Collecting evidence";
-  if (!workspace.reviewedSourceIds.length) return "Reviewing reconstruction";
-  if (!workspace.interviewCompletedAt) return critical.length ? `Filling gaps · ${critical.length} critical` : "Finishing gap review";
+  if (!reconstructionReviewed(workspace)) return "Reviewing reconstruction";
+  if (!workspace.interviewCompletedAt) return critical.length ? `Adding context · ${critical.length} critical` : "Adding missing context";
   if (workspace.successorReview?.status === "accepted") return "Handoff complete";
   if (workspace.successorReview) return "Successor review in progress";
   return "Ready for successor review";
@@ -76,7 +89,7 @@ export function HandoffsPageV2() {
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">My handoffs</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Every handoff, one clear place.</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Each person has a separate evidence set, reconstruction, gap review, and successor verification.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">Each handoff keeps its evidence, reconstruction, missing context, and successor verification separate.</p>
           </div>
           <div className="flex flex-wrap gap-2"><Link href="/demo" className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-muted sm:hidden">See demo</Link><Link href="/new" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> New handoff</Link></div>
         </div>
