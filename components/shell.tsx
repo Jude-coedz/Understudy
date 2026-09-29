@@ -10,17 +10,15 @@ import {
   IconCheck,
   IconHome,
   IconPlug,
-  IconSpark,
   IconTransition,
 } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
 
 const PRIMARY_NAV = [
-  { href: "/workspace", label: "Workspace", icon: IconHome },
+  { href: "/workspace", label: "Current handoff", icon: IconHome },
+  { href: "/handoffs", label: "My handoffs", icon: IconTransition },
+  { href: "/ask", label: "Ask", icon: IconAsk },
   { href: "/review", label: "Successor review", icon: IconCheck },
-  { href: "/recover-ai", label: "Recover AI context", icon: IconSpark },
-  { href: "/ask", label: "Ask Understudy", icon: IconAsk },
-  { href: "/transitions", label: "Demo transitions", icon: IconTransition },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -59,8 +57,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-3 py-3 shadow-sm">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent-soft text-[12px] font-semibold text-accent">{synced ? "S" : identity?.provider === "google" ? "G" : "P"}</span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium">Personal workspace</span>
-              <span className="mt-0.5 block truncate text-[12px] text-faint">{synced ? identity?.email || "Synced account" : identity?.provider === "google" ? identity.email || identity.name : "Browser-isolated trial"}</span>
+              <span className="block truncate text-[13px] font-medium">Your handoff workspace</span>
+              <span className="mt-0.5 block truncate text-[12px] text-faint">{synced ? identity?.email || "Synced" : identity?.provider === "google" ? identity.email || identity.name : "Private local session"}</span>
             </span>
           </div>
         </div>
@@ -89,7 +87,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border-strong bg-card text-[11px] font-semibold text-muted shadow-sm">{initials || "G"}</span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-medium">{identity?.name || "Guest workspace"}</p>
-                <p className="mt-0.5 truncate text-[12px] text-faint">{synced ? "Synced account" : identity?.provider === "google" ? "Drive identity" : "Local trial"}</p>
+                <p className="mt-0.5 truncate text-[12px] text-faint">{synced ? "Synced" : identity?.provider === "google" ? "Google connected" : "Private session"}</p>
               </div>
             </div>
             <div className="mt-2"><CloudAccountControl /></div>
