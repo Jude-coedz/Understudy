@@ -42,7 +42,7 @@ export function HandoffRecordPage() {
   const transition = workspace.transition;
   const review = workspace.successorReview;
   const accepted = review?.status === "accepted";
-  const evidence = transition.sources.filter((source) => source.kind !== "interview");
+  const evidence = transition.sources.filter((source) => source.kind !== "interview" || source.provider === "Employee context");
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -91,7 +91,7 @@ export function HandoffRecordPage() {
           <section className="rounded-2xl border border-border bg-card p-5"><p className="text-sm font-medium">Continuity risks</p><div className="mt-3 space-y-3">{transition.risks.length ? transition.risks.map((risk) => <div key={risk.title}><p className="text-sm font-medium">{risk.title}</p><p className="mt-1 text-xs leading-5 text-subtle">{risk.detail}</p></div>) : <p className="text-sm text-subtle">No material continuity risks recorded.</p>}</div></section>
         </div>
 
-        <section className="mt-5 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><p className="text-sm font-medium">Evidence set</p><span className="text-xs text-subtle">{evidence.length} source{evidence.length === 1 ? "" : "s"}</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{evidence.slice(0, 12).map((source) => <div key={source.id} className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5"><IconFile className="h-4 w-4 shrink-0 text-muted" /><p className="min-w-0 truncate text-xs text-muted">{source.title}</p></div>)}</div>{evidence.length > 12 && <p className="mt-3 text-xs text-subtle">+ {evidence.length - 12} more sources retained in the workspace.</p>}</section>
+        <section className="mt-5 rounded-2xl border border-border bg-card p-5"><div className="flex items-center justify-between"><p className="text-sm font-medium">Evidence set</p><span className="text-xs text-subtle">{evidence.length} source{evidence.length === 1 ? "" : "s"}</span></div><div className="mt-3 grid gap-2 sm:grid-cols-2">{evidence.slice(0, 12).map((source) => <div key={source.id} className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5"><IconFile className="h-4 w-4 shrink-0 text-muted" /><div className="min-w-0"><p className="truncate text-xs text-muted">{source.title}</p><p className="mt-0.5 truncate text-[10px] text-faint">{source.provider === "Employee context" ? "Employee-provided context" : source.provider}</p></div></div>)}</div>{evidence.length > 12 && <p className="mt-3 text-xs text-subtle">+ {evidence.length - 12} more sources retained in the workspace.</p>}</section>
 
         <section className="mt-5 rounded-2xl border border-border bg-card p-5"><p className="text-sm font-medium">Open follow-ups</p><div className="mt-3 space-y-2">{followups.length ? followups.map((gap) => <div key={gap.question} className="rounded-lg bg-background px-3 py-2.5"><p className="text-sm leading-6 text-muted">{gap.question}</p><p className="mt-0.5 text-[11px] text-faint">{gap.topic} · {gap.priority}</p></div>) : <p className="text-sm text-subtle">No open follow-ups.</p>}</div></section>
 
