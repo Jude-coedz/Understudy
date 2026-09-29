@@ -33,7 +33,7 @@ function statusFor(workspace: PersonalWorkspace) {
   const critical = blockingCriticalGaps(workspace.transition.gaps, workspace.interviewGapStates ?? {});
   if (!workspace.evidenceCollectionComplete || !workspace.roleEvidence) return "Collecting evidence";
   if (!reconstructionReviewed(workspace)) return "Reviewing reconstruction";
-  if (!workspace.interviewCompletedAt) return critical.length ? `Adding context · ${critical.length} critical` : "Adding missing context";
+  if (!workspace.interviewCompletedAt) return critical.length ? `Adding context · ${critical.length} blocking` : "Adding missing context";
   if (workspace.successorReview?.status === "accepted") return "Handoff complete";
   if (workspace.successorReview) return "Successor review in progress";
   return "Ready for successor review";
@@ -70,7 +70,15 @@ export function HandoffsPageV2() {
 
   function open(workspace: PersonalWorkspace) {
     setCurrentWorkspace(workspace.id, workspace.ownerId);
-    window.location.assign(workspace.successorReview?.status === "accepted" ? "/record" : "/workspace");
+    if (workspace.successorReview?.status === "accepted") {
+      window.location.assign("/record");
+      return;
+    }
+    if (workspace.successorReview) {
+      window.location.assign("/review");
+      return;
+    }
+    window.location.assign("/workspace");
   }
 
   const accountMode = identity?.provider === "account";
