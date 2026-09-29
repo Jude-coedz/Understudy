@@ -97,8 +97,8 @@ export async function POST(req: Request) {
     reconstructedProjects: context.transition.projects,
     reconstructedRisks: context.transition.risks,
     unresolvedGaps: context.transition.gaps,
-    sourceCount: context.sources.filter((source) => source.kind !== "interview").length,
-    sourceTitles: context.sources.filter((source) => source.kind !== "interview").map((source) => source.title),
+    sourceCount: context.sources.filter((source) => source.kind !== "interview" || source.provider === "Employee context").length,
+    sourceTitles: context.sources.filter((source) => source.kind !== "interview" || source.provider === "Employee context").map((source) => source.title),
   };
 
   const llm = await completeJsonDetailed<ModelAnswer>(
