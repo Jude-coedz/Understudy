@@ -64,14 +64,38 @@ export function SuccessorReviewPanelV2() {
 
   if (!workspace.interviewCompletedAt) {
     const followups = workspace.successorReview?.submittedQuestions ?? [];
-    const raisedDuringReview = followups.length > 0;
+    const raisedDuringReview = workspace.successorReview?.status === "changes-requested" && followups.length > 0;
+
+    if (raisedDuringReview) {
+      return (
+        <div className="mx-auto max-w-2xl px-5 py-16 text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-warning/10 text-warning"><IconMessage className="h-5 w-5" /></span>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.12em] text-warning">Concern sent</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Waiting on {workspace.transition.person}.</h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted">
+            Your concern reopened the handoff for the current owner. You do not need to answer it yourself. When {workspace.transition.person} resolves the missing context, this readiness check becomes available again.
+          </p>
+          <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-warning/20 bg-warning/5 p-5 text-left">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">Your blocking concern</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{followups[followups.length - 1]}</p>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Link href="/record?returnTo=%2Freview" className="inline-flex h-10 items-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-muted">View handoff record</Link>
+            <Link href="/handoffs" className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white">Back to my handoffs</Link>
+          </div>
+          <p className="mt-5 text-xs leading-5 text-subtle">Understudy keeps this review open. No HR approval is required for this loop.</p>
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto max-w-2xl px-5 py-16 text-center">
-        <p className="text-xs font-medium uppercase tracking-[0.12em] text-warning">{raisedDuringReview ? "Successor follow-up saved" : "Missing context still open"}</p>
-        <h1 className="mt-2 text-2xl font-semibold">{raisedDuringReview ? "The handoff has reopened." : "Finish the missing context first."}</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">{raisedDuringReview ? "The question you raised is stored in the successor review and has also become a blocking open question in the context review. It must be addressed before acceptance." : "Successor verification is the final step, not a shortcut around unresolved handoff context."}</p>
-        {raisedDuringReview && <div className="mx-auto mt-5 max-w-lg rounded-xl border border-border bg-card p-4 text-left"><p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">Latest follow-up</p><p className="mt-2 text-sm leading-6 text-muted">{followups[followups.length - 1]}</p></div>}
-        <Link href="/workspace" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white">{raisedDuringReview ? "Resolve missing context" : "Back to missing context"} <IconChevronRight /></Link>
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-warning">Not ready for successor review</p>
+        <h1 className="mt-2 text-2xl font-semibold">The current owner still has missing context to resolve.</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          This page belongs to {workspace.transition.successor}. Understudy will open the readiness check once {workspace.transition.person}&apos;s handoff is ready for review.
+        </p>
+        <Link href="/handoffs" className="mt-5 inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-medium text-white">Back to my handoffs</Link>
       </div>
     );
   }
@@ -170,7 +194,7 @@ export function SuccessorReviewPanelV2() {
   function confirmAccept() {
     if (criticalGaps.length) {
       setShowAcceptConfirm(false);
-      setMessage(`Resolve ${criticalGaps.length} critical follow-up${criticalGaps.length === 1 ? "" : "s"} before acceptance.`);
+      setMessage(`Resolve ${criticalGaps.length} blocking follow-up${criticalGaps.length === 1 ? "" : "s"} before acceptance.`);
       return;
     }
     if (!allChecksComplete) {
@@ -226,8 +250,8 @@ export function SuccessorReviewPanelV2() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Link href="/record" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconMessage className="h-4 w-4" /> Review handoff</Link>
-            <Link href="/ask" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconAsk className="h-4 w-4" /> Ask Understudy</Link>
+            <Link href="/record?returnTo=%2Freview" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconMessage className="h-4 w-4" /> Review handoff</Link>
+            <Link href="/ask?returnTo=%2Freview" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-xs font-semibold text-muted"><IconAsk className="h-4 w-4" /> Ask Understudy</Link>
           </div>
         </div>
       </div>
@@ -319,7 +343,7 @@ export function SuccessorReviewPanelV2() {
           <p className="text-sm font-semibold">Complete the transfer</p>
           <p className="mt-1 text-xs leading-5 text-subtle">
             {criticalGaps.length
-              ? criticalGaps.length + " critical concern" + (criticalGaps.length === 1 ? " still blocks" : "s still block") + " acceptance."
+              ? criticalGaps.length + " blocking concern" + (criticalGaps.length === 1 ? " still blocks" : "s still block") + " acceptance."
               : notesDirty
                 ? "Save your note first."
                 : !allChecksComplete
