@@ -63,21 +63,21 @@ export function NewHandoffFlow() {
   );
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-background/95 backdrop-blur-xl">
+    <div className="understudy-flow-shell min-h-screen bg-background text-foreground">
+      <header className="understudy-topbar border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium"><UnderstudyMark size={32} />Understudy</Link>
           <Link href="/handoffs" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">My handoffs</Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-5 py-10 lg:px-8 lg:py-14">
+      <main className="understudy-flow-main mx-auto max-w-3xl px-5 py-10 lg:px-8 lg:py-14">
         <motion.div initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}>
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">New handoff</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">Whose work is changing hands?</h1>
           <p className="mt-4 max-w-2xl text-base leading-7 text-muted">Set the boundary once. On the next screen, bring the work that already exists and add the context only the current owner can explain.</p>
 
-          <div className="mt-8 grid gap-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-2 sm:p-6">
+          <div className="understudy-form-panel mt-8 grid gap-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-2 sm:p-6">
             {field("person", "Person handing over", person, setPerson, "e.g. Joe Adams")}
             {field("role", "Role", role, setRole, "e.g. Product Manager")}
             {field("department", "Team / department", department, setDepartment, "e.g. Product")}
