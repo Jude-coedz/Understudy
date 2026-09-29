@@ -1,46 +1,94 @@
 # Understudy
 
-**Understudy is an AI-powered work handoff system that reconstructs what someone worked on, finds missing context, and helps transfer ownership before that knowledge disappears.**
+**Understudy reconstructs an employee's work from existing evidence, finds what only they know, and turns it into a successor-verified handoff.**
 
-Understudy is being rebuilt around a simple idea: when work changes hands, the successor should inherit more than a folder of documents. They should inherit the projects, decisions, reasoning, risks, open work, and source evidence needed to continue.
+When someone changes roles or leaves a company, the next person usually inherits documents, folders, chat history, and a short handover note. What disappears is the operating context: why decisions were made, recurring exceptions, ownership boundaries, unfinished work, and the things the outgoing person simply knew.
 
-## V2 product flow
+Understudy is a proof of concept for preserving that context without asking someone to document their job from scratch.
+
+## How it works
 
 ```text
-Create transition
+Create a handoff
       ↓
-Collect evidence
-      ├── documents
-      ├── GitHub
-      ├── AI conversation recovery
-      └── employee input
+Collect existing evidence
+      ├── uploaded documents
+      ├── Google Drive files
+      ├── GitHub / work artifacts
+      ├── recovered AI context
+      └── employee-provided context (typed or dictated)
       ↓
-AI reconstructs work
+Understudy reconstructs the role
       ↓
-Employee confirms / corrects
+Employee reviews the interpretation
       ↓
-Understudy detects gaps
+Understudy finds missing context
       ↓
-Adaptive handoff interview
+Adaptive gap interview
       ↓
-Verified handoff
+Successor receives the handoff
       ↓
-Successor questions + cited answers
+Successor asks cited questions and verifies continuity
 ```
 
-The V2 UI is built around **Transitions** rather than a generic knowledge base. Supporting capabilities include Sources, Work Map, Interview, Handover, Questions, and Continuity risk.
+The product follows one rule throughout:
+
+> **Evidence before inference.**
+
+Primary sources, AI-recovered material, and self-reported context keep their provenance visible rather than silently becoming the same kind of truth.
+
+## What the POC demonstrates
+
+- Multi-source evidence collection
+- File text extraction
+- Google Drive file selection
+- AI-context recovery from tools such as ChatGPT, Claude, and Gemini
+- Employee-provided role context with typing and browser voice dictation
+- Whole-role reconstruction across an evidence set
+- Source provenance and confidence
+- Missing-context and continuity-gap detection
+- Adaptive handoff interview
+- Source-specific clarification
+- Evidence-grounded Ask Understudy
+- Successor notes and follow-up questions
+- Successor verification before a handoff is marked complete
+- Reopening a handoff when the successor discovers a blocking gap
+- Private local trial state and optional account sync
+- Deterministic evidence fallback when model synthesis is unavailable
+
+## Guided demo
+
+The quickest way to understand Understudy is the fictional guided handoff:
+
+```text
+/demo
+```
+
+It walks through:
+
+1. **Collect** — start with work that already exists and add employee context.
+2. **Understand** — reconstruct responsibilities, active work, decisions, risks, and ownership.
+3. **Fill the gaps** — ask only what the evidence cannot explain.
+4. **Hand over** — give the successor usable context with source-backed answers.
+5. **Verify** — finish only when the successor confirms they can continue the work.
 
 ## AI context recovery
 
-A meaningful amount of modern work reasoning lives in tools such as ChatGPT, Claude, and Gemini rather than formal documents.
+Modern work reasoning often lives inside AI assistants rather than formal documents.
 
-Understudy can generate a structured recovery prompt for an employee to run inside the AI assistant they used for work. The returned context can then be imported as **AI-recovered evidence** and reviewed alongside primary documents and self-reported interview answers.
+Understudy can generate a structured recovery prompt for a user to run in an assistant they used for work. The returned material is imported as **AI-recovered evidence**, clearly separated from primary documents and self-reported employee context.
 
-AI-recovered evidence is never treated as unquestionable truth. Understudy keeps source provenance and confidence visible.
+## Employee-provided context
+
+Not everything a person did during a role will exist in a file.
+
+During evidence collection, the employee can type or dictate how the role actually worked: recurring responsibilities, unwritten exceptions, stakeholder relationships, decision rationale, and practical steps a successor would otherwise have to rediscover.
+
+This material is stored as **self-reported context** and is compared with the rest of the evidence rather than treated as primary evidence.
 
 ## AI provider
 
-The hosted AI adapter uses the Gemini Developer API through a server-side route.
+The hosted synthesis adapter uses the Gemini Developer API through a server-side route.
 
 Default model:
 
@@ -48,16 +96,26 @@ Default model:
 gemini-3.1-flash-lite
 ```
 
-If `GEMINI_API_KEY` is missing or the model call fails, the existing deterministic fallback logic remains available for supported demo flows.
+If the model is unavailable, supported flows fall back to deterministic evidence retrieval rather than inventing an answer.
 
-## Running locally
+## Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Motion
+- Zustand
+- Gemini Developer API
+- vinext
+- Cloudflare Workers
+
+## Run locally
 
 Requirements:
 
 - Node.js 22+
-- A Gemini API key is optional for deterministic demo flows
-
-Install and run the normal Next.js development server:
+- Gemini API key optional for deterministic demo flows
 
 ```bash
 npm ci
@@ -71,7 +129,7 @@ Then open:
 http://127.0.0.1:43127
 ```
 
-To run using the Cloudflare Workers-compatible vinext development path:
+For the Cloudflare-compatible development path:
 
 ```bash
 npm run dev:cloudflare
@@ -79,32 +137,9 @@ npm run dev:cloudflare
 
 ## Cloudflare deployment
 
-Understudy follows the same deployment principle as Forge: the application and its server routes run on **Cloudflare Workers**, while the model API key stays server-side as an encrypted Worker secret.
+The app and server routes run on Cloudflare Workers. Model credentials stay server-side as Worker secrets.
 
-The repository includes:
-
-- `vite.config.ts` — vinext + Cloudflare Vite configuration
-- `wrangler.jsonc` — Worker configuration
-- `npm run build:cloudflare` — production Workers build
-- `npm run deploy` — build and deploy with Wrangler
-
-### Required Cloudflare secret
-
-Add this in Cloudflare rather than committing it to GitHub:
-
-```text
-GEMINI_API_KEY
-```
-
-`GEMINI_MODEL` is non-sensitive and defaults to `gemini-3.1-flash-lite` in `wrangler.jsonc`.
-
-For local Workers development, place secrets in `.dev.vars` or `.env` and do not commit those files.
-
-### Git-connected deployment
-
-Connect this GitHub repository to a Cloudflare Worker and use `main` as the production branch. Cloudflare Workers Builds can then rebuild and deploy whenever new commits land on `main`.
-
-Recommended build settings:
+Recommended Git-connected settings:
 
 ```text
 Production branch: main
@@ -113,35 +148,15 @@ Build command: npm run build:cloudflare
 Deploy command: npx wrangler deploy
 ```
 
-The Worker name in Cloudflare should be `understudy`, matching `wrangler.jsonc`.
+Required Worker secret:
 
-## Current stack
+```text
+GEMINI_API_KEY
+```
 
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- Zustand
-- Gemini Developer API
-- vinext
-- Cloudflare Workers
+## Security
 
-## Current V2 scope
-
-The first V2 slice establishes the product shell and transition workflow. The next implementation slice is:
-
-1. real transition domain model
-2. document ingestion
-3. Gemini structured extraction
-4. gap detection
-5. public GitHub analysis
-6. adaptive interview feedback loop
-7. grounded Ask-the-Handoff
-8. handoff export
-
-## Security note
-
-API keys are never intended to be exposed to the browser or committed to the repository. For this free portfolio build, use fictional or sanitized company material when testing third-party AI APIs.
+Use fictional or sanitized company material when testing the public POC. API keys are not intended to be exposed to the browser or committed to the repository.
 
 ## License
 
