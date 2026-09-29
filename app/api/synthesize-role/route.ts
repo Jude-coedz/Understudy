@@ -82,6 +82,11 @@ export async function POST(req: Request) {
       null,
       2,
     )}`,
+    {
+      timeoutMs: 45_000,
+      maxOutputTokens: 6_000,
+      temperature: 0.15,
+    },
   );
 
   return NextResponse.json({
