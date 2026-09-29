@@ -27,9 +27,10 @@ import { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from 
 import { IconAsk, IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
 import { AnalysisOverlay } from "./analysis-overlay";
+import { VoiceInput } from "./voice-input";
 
 type Stage = "sources" | "map" | "interview" | "handoff";
-type SourceMode = "upload" | "paste" | "drive" | "ai";
+type SourceMode = "upload" | "self" | "paste" | "drive" | "ai";
 type PendingEvidence = { id: string; title: string; text: string; provider: string; kind?: EvidenceKind };
 type ReadingFiles = { current: number; total: number; name: string } | null;
 type AnalysisProgress = { current: number; total: number; name: string; phase: number } | null;
@@ -63,12 +64,20 @@ function isClarification(source: SourceItem) {
   return source.kind === "interview" && source.provider === "Source clarification";
 }
 
+function isEmployeeContext(source: SourceItem) {
+  return source.kind === "interview" && source.provider === "Employee context";
+}
+
 function roleSourcesFor(workspace: PersonalWorkspace) {
-  return workspace.transition.sources.filter((source) => source.kind !== "interview" || isClarification(source));
+  return workspace.transition.sources.filter(
+    (source) => source.kind !== "interview" || isClarification(source) || isEmployeeContext(source),
+  );
 }
 
 function originalSourcesFor(workspace: PersonalWorkspace) {
-  return workspace.transition.sources.filter((source) => source.kind !== "interview");
+  return workspace.transition.sources.filter(
+    (source) => source.kind !== "interview" || isEmployeeContext(source),
+  );
 }
 
 function reconstructionReviewed(workspace: PersonalWorkspace) {
@@ -97,6 +106,7 @@ function resetSuccessorReview(workspace: PersonalWorkspace) {
 
 function evidenceLabel(source: SourceItem) {
   if (isClarification(source)) return "Self-reported clarification";
+  if (isEmployeeContext(source)) return "Employee-provided context";
   if (source.kind === "github") return "GitHub";
   if (source.kind === "ai-context") return "AI-recovered";
   return source.provider;
@@ -152,6 +162,7 @@ export function GuidedWorkspace() {
   const [sourceTitle, setSourceTitle] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceProvider, setSourceProvider] = useState("Pasted evidence");
+  const [employeeContext, setEmployeeContext] = useState("");
   const [queued, setQueued] = useState<PendingEvidence[]>([]);
   const [readingFiles, setReadingFiles] = useState<ReadingFiles>(null);
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>(null);
@@ -234,7 +245,7 @@ export function GuidedWorkspace() {
         provider: item.provider,
         meta: `Added ${addedAt}`,
         extracted: ["Ready for role synthesis"],
-        confidence: kind === "ai-context" ? "AI-recovered" : "Primary",
+        confidence: kind === "ai-context" ? "AI-recovered" : kind === "interview" ? "Self-reported" : "Primary",
       };
       return { source, text: item.text };
     });
@@ -331,6 +342,21 @@ export function GuidedWorkspace() {
     }]);
     setSourceMode("ai");
     setMessage(`AI context from ${assistant} is saved in this handoff. Add documents, Drive files, or pasted evidence whenever you are ready; it will all be considered together when you connect the evidence.`);
+  }
+
+  async function addEmployeeContext() {
+    const text = employeeContext.trim();
+    if (!text || analysisProgress) return;
+    await analyseBatch([{
+      id: `employee-context-${crypto.randomUUID()}`,
+      title: "How I actually worked in this role",
+      text,
+      provider: "Employee context",
+      kind: "interview",
+    }]);
+    setEmployeeContext("");
+    setSourceMode("self");
+    setMessage("Your explanation is saved as employee-provided context. Understudy will compare it with the rest of the evidence rather than treating it as unquestioned fact.");
   }
 
   async function synthesizeRole(base: PersonalWorkspace) {
@@ -559,8 +585,20 @@ export function GuidedWorkspace() {
 
               {aiContextSources.length > 0 && !adding && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent-soft p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-card text-accent"><IconSpark /></span><div className="min-w-0"><p className="text-sm font-medium">AI context is included in this handoff</p><p className="mt-1 text-xs leading-5 text-subtle">{aiContextSources.length} recovered context source{aiContextSources.length === 1 ? "" : "s"} saved. Understudy will combine {aiContextSources.length === 1 ? "it" : "them"} with every document, Drive file, GitHub source, or pasted artifact you add before you connect the evidence.</p><div className="mt-2 flex flex-wrap gap-1.5">{aiContextSources.slice(0, 3).map((source) => <span key={source.id} className="rounded-full border border-accent/15 bg-card px-2 py-1 text-[11px] text-muted">{source.provider}</span>)}</div></div></motion.div>}
 
-              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} data-ui-action="nav" aria-pressed={sourceMode === mode} onClick={() => setSourceMode(mode)} className={`rounded-xl border px-3 py-2 text-xs font-medium ${sourceMode === mode ? "border-accent/20 bg-accent-soft text-foreground shadow-sm" : "border-transparent text-muted hover:border-border hover:bg-background hover:text-foreground"}`}>{mode === "upload" ? "Upload files" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}</div><div className="p-5">
+              {(adding || !originalSources.length) && <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-card shadow-sm"><div className="flex gap-1 border-b border-border p-2">{(["upload", "self", "paste", "drive", "ai"] as SourceMode[]).map((mode) => <button key={mode} data-ui-action="nav" aria-pressed={sourceMode === mode} onClick={() => setSourceMode(mode)} className={`rounded-xl border px-3 py-2 text-xs font-medium ${sourceMode === mode ? "border-accent/20 bg-accent-soft text-foreground shadow-sm" : "border-transparent text-muted hover:border-border hover:bg-background hover:text-foreground"}`}>{mode === "upload" ? "Upload files" : mode === "self" ? "Tell Understudy" : mode === "paste" ? "Paste text" : mode === "drive" ? "Google Drive" : "AI context"}</button>)}</div><div className="p-5">
                 {sourceMode === "upload" && <><button disabled={Boolean(readingFiles || analysisProgress)} onClick={() => uploadRef.current?.click()} className="flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-border-strong bg-background px-6 text-center disabled:cursor-wait"><IconUpload className="text-muted" /><p className="mt-3 text-sm font-medium">Choose one or more work files</p><p className="mt-1 max-w-md text-xs leading-5 text-subtle">{SUPPORTED_UPLOAD_LABEL}</p></button><input ref={uploadRef} type="file" multiple accept={SUPPORTED_UPLOAD_ACCEPT} className="hidden" onChange={(event) => void queueFiles(event.target.files)} /></>}
+                {sourceMode === "self" && <div>
+                  <div className="max-w-xl">
+                    <p className="text-sm font-medium">Tell Understudy what you actually did.</p>
+                    <p className="mt-1 text-xs leading-5 text-subtle">Explain the parts of the role that may never appear cleanly in a file: recurring responsibilities, how work really moved, key people, exceptions, decisions you made, and anything the next owner should understand.</p>
+                  </div>
+                  <textarea value={employeeContext} onChange={(event) => setEmployeeContext(event.target.value)} rows={9} placeholder="For example: Every Monday I reviewed failed settlements, checked the reconciliation sheet, then followed up with Finance when a bank file was missing. The normal runbook does not explain what to do when..." className="mt-4 w-full rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none placeholder:text-faint focus:border-border-strong" />
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <VoiceInput value={employeeContext} onChange={setEmployeeContext} disabled={Boolean(analysisProgress)} />
+                    <button disabled={!employeeContext.trim() || Boolean(analysisProgress)} onClick={() => void addEmployeeContext()} className="h-10 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-35">Add my context</button>
+                  </div>
+                  <p className="mt-3 text-[11px] leading-5 text-faint">Saved as employee-provided context, not primary evidence. Understudy keeps the provenance visible and checks it against the rest of the handoff.</p>
+                </div>}
                 {readingFiles && <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 flex items-center gap-3 rounded-xl border border-accent/20 bg-accent-soft px-4 py-3"><motion.span animate={reducedMotion ? undefined : { rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="h-4 w-4 rounded-full border-2 border-accent/30 border-t-accent" /><div><p className="text-sm font-medium">Reading file {readingFiles.current} of {readingFiles.total}</p><p className="text-xs text-subtle">{readingFiles.name}</p></div></motion.div>}
                 {sourceMode === "paste" && <div><input value={sourceTitle} onChange={(event) => { setSourceTitle(event.target.value); setSourceProvider("Pasted evidence"); }} placeholder="Source title" className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none" /><textarea value={sourceText} onChange={(event) => { setSourceText(event.target.value); setSourceProvider("Pasted evidence"); }} rows={8} placeholder="Paste the artifact exactly as it exists…" className="mt-3 w-full rounded-lg border border-border bg-background p-3 text-sm leading-6 outline-none" /><button disabled={!sourceTitle.trim() || !sourceText.trim() || Boolean(analysisProgress)} onClick={() => void analyseBatch([{ id: crypto.randomUUID(), title: sourceTitle.trim(), text: sourceText.trim(), provider: sourceProvider }])} className="mt-3 h-10 rounded-lg bg-foreground px-4 text-sm font-medium text-background disabled:opacity-35">Add this source</button></div>}
                 {sourceMode === "drive" && <div className="py-8 text-center"><p className="text-sm font-medium">Choose the exact Drive file Understudy may read</p><p className="mx-auto mt-2 max-w-md text-xs leading-5 text-subtle">Understudy does not scan your Drive.</p><button onClick={() => void connectDrive()} className="mt-4 h-10 rounded-lg border border-border-strong px-4 text-sm font-medium text-muted">Choose Drive file</button></div>}
