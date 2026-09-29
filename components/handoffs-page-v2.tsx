@@ -85,7 +85,7 @@ export function HandoffsPageV2() {
           <span className={`h-2 w-2 rounded-full ${accountMode ? "bg-ok" : "bg-faint"}`} />
           <span>{accountMode ? "Handoffs are synced privately to your account." : "This trial is saved privately in this browser."}</span>
           <span className="text-faint">·</span>
-          <CloudAccountControl compact />
+          <span>{accountMode ? "Available across signed-in devices" : "Only this browser can see it"}</span>
         </div>
 
         {sorted.length ? (
