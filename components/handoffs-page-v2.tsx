@@ -57,7 +57,7 @@ export function HandoffsPageV2() {
 
   function open(workspace: PersonalWorkspace) {
     setCurrentWorkspace(workspace.id, workspace.ownerId);
-    window.location.assign("/workspace");
+    window.location.assign(workspace.successorReview?.status === "accepted" ? "/record" : "/workspace");
   }
 
   const accountMode = identity?.provider === "account";
@@ -93,7 +93,9 @@ export function HandoffsPageV2() {
             {sorted.map((workspace, index) => {
               const active = workspace.id === currentId;
               const accepted = workspace.successorReview?.status === "accepted";
-              const evidenceCount = workspace.transition.sources.filter((source) => source.kind !== "interview").length;
+              const evidenceCount = workspace.transition.sources.filter(
+                (source) => source.kind !== "interview" || source.provider === "Employee context",
+              ).length;
               return (
                 <motion.button
                   key={workspace.id}
