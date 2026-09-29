@@ -16,7 +16,7 @@ export function SuccessorReviewPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link href="/handoffs" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted hover:bg-card-hover sm:inline-flex">My handoffs</Link>
-            <a href="/workspace" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Back to handoff</a>
+            <Link href="/workspace" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">Back to handoff</Link>
             <CloudAccountControl compact />
           </div>
         </div>
