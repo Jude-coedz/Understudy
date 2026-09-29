@@ -63,8 +63,8 @@ export function HandoffsPageV2() {
   const accountMode = identity?.provider === "account";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-border bg-background/95 backdrop-blur-xl">
+    <div className="understudy-library-shell min-h-screen bg-background text-foreground">
+      <header className="understudy-topbar border-b border-border bg-background/95 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium tracking-[-0.02em]"><UnderstudyMark size={32} />Understudy</Link>
           <div className="flex items-center gap-2"><Link href="/demo" className="hidden rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover sm:inline-flex">Guided demo</Link><Link href="/" className="rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted hover:bg-card-hover">Home</Link><CloudAccountControl compact /></div>
@@ -104,7 +104,7 @@ export function HandoffsPageV2() {
                   initial={reducedMotion ? false : { opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: reducedMotion ? 0 : index * 0.03 }}
-                  className="group grid w-full gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-colors hover:border-border-strong hover:bg-card-hover sm:grid-cols-[minmax(0,1fr)_210px_24px] sm:items-center"
+                  className="understudy-handoff-row group grid w-full gap-4 rounded-2xl border border-border bg-card p-5 text-left shadow-sm transition-colors hover:border-border-strong hover:bg-card-hover sm:grid-cols-[minmax(0,1fr)_210px_24px] sm:items-center"
                 >
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
