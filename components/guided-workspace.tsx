@@ -498,15 +498,29 @@ export function GuidedWorkspace() {
   function confirmReconstruction() {
     if (!workspace || !roleSources.length) return;
     const now = new Date().toISOString();
+    const hasOpenGaps = workspace.transition.gaps.some(
+      (gap) => !isDismissedInterviewGap(workspace.interviewGapStates[gap.question]),
+    );
+    const limitedAnalysisNeedsChecks = workspace.roleEvidence?.usedModel === false && !hasOpenGaps;
+    const canSkipContextReview = !hasOpenGaps && !limitedAnalysisNeedsChecks;
+
     const next: PersonalWorkspace = {
       ...workspace,
       updatedAt: now,
       reviewedSourceIds: roleSources.map((source) => source.id),
-      interviewCompletedAt: undefined,
+      interviewCompletedAt: canSkipContextReview ? now : undefined,
     };
+
     persist(next);
+
+    if (canSkipContextReview) {
+      setStage("handoff");
+      setMessage("Reconstruction confirmed. Understudy found no missing context that needs a human answer, so the handoff draft is ready.");
+      return;
+    }
+
     setStage("interview");
-    setMessage("Reconstruction confirmed. Understudy will now ask only about unresolved context that matters for continuity.");
+    setMessage("Reconstruction confirmed. Understudy found a few pieces of context that still need a human answer.");
   }
 
   function removeSource(source: SourceItem) {
@@ -663,7 +677,15 @@ export function GuidedWorkspace() {
           {stage === "interview" && (
             <section className="mx-auto max-w-3xl">
               <div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">Close the missing context</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Understudy found what the evidence still can’t explain.</h1><p className="mt-3 text-base leading-7 text-muted">Answer only the remaining questions a successor would otherwise have to figure out after you leave. Understudy already handled the rest.</p></div>
-              <div className="mt-7"><AdaptiveInterview workspace={workspace} onWorkspaceChange={persist} onMessage={setMessage} /></div>
+              <div className="mt-7"><AdaptiveInterview
+                workspace={workspace}
+                onWorkspaceChange={persist}
+                onMessage={setMessage}
+                onComplete={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+                  setStage("handoff");
+                }}
+              /></div>
               <div className="mt-7 flex items-center justify-between"><button onClick={() => go("map")} className="text-sm font-medium text-subtle">← Back to reconstruction</button>{workspace.interviewCompletedAt && <button onClick={() => go("handoff")} className="h-11 rounded-lg bg-accent px-4 text-sm font-medium text-white">Open handoff draft <IconChevronRight className="ml-1 inline" /></button>}</div>
             </section>
           )}
