@@ -265,6 +265,8 @@ export function PolishRuntime() {
       return (
         element.tagName === "SECTION" ||
         classes.includes("rounded-xl") ||
+        classes.includes("rounded-2xl") ||
+        classes.includes("rounded-3xl") ||
         classes.includes("sm:grid-cols-[40px") ||
         element.getAttribute("role") === "status" ||
         element.getAttribute("role") === "dialog"
@@ -285,13 +287,13 @@ export function PolishRuntime() {
       );
     };
 
-    document.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
+    document.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [class*='rounded-2xl'][class*='border'], [class*='rounded-3xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach((node) => {
           if (!(node instanceof Element)) return;
           animateSurface(node);
-          node.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
+          node.querySelectorAll("section, [class*='rounded-xl'][class*='border'], [class*='rounded-2xl'][class*='border'], [class*='rounded-3xl'][class*='border'], [role='status'], [role='dialog']").forEach(animateSurface);
         });
       }
     });
