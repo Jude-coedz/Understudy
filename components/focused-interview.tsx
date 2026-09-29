@@ -259,11 +259,11 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
                 <IconCheck />
               </span>
               <p className="mt-5 text-xs font-semibold uppercase tracking-[0.1em] text-subtle">
-                {hasCriticalFollowUp ? "One thing still needs an answer" : parked.length ? "Questions handled" : "Context complete"}
+                {hasCriticalFollowUp ? "One blocking question remains" : parked.length ? "Questions handled" : "Context complete"}
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
                 {hasCriticalFollowUp
-                  ? "A critical gap is still open."
+                  ? "A blocking question is still open."
                   : parked.length
                     ? "You have answered everything you can for now."
                     : "Understudy has enough context to build the handoff."}
@@ -337,7 +337,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted">{focus.length} left</span>
-            {criticalRemaining > 0 && <span className="rounded-full border border-danger/15 bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">{criticalRemaining} critical</span>}
+            {criticalRemaining > 0 && <span className="rounded-full border border-danger/15 bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">{criticalRemaining} blocking</span>}
             <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-subtle">~{minutes} min</span>
           </div>
         </div>
@@ -374,7 +374,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
             <div className="rounded-[24px] border border-border-strong bg-card p-5 shadow-sm sm:p-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${current.priority === "Critical" ? "bg-danger/8 text-danger" : "bg-warning/8 text-warning"}`}>
-                  {current.priority === "Critical" ? "Important for continuity" : "Useful context"}
+                  {current.priority === "Critical" ? "Blocks handoff" : "Useful context"}
                 </span>
                 <span className="text-xs text-subtle">{current.topic}</span>
               </div>
