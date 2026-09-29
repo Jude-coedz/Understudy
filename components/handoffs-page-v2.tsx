@@ -33,9 +33,12 @@ function statusFor(workspace: PersonalWorkspace) {
   const critical = blockingCriticalGaps(workspace.transition.gaps, workspace.interviewGapStates ?? {});
   if (!workspace.evidenceCollectionComplete || !workspace.roleEvidence) return "Collecting evidence";
   if (!reconstructionReviewed(workspace)) return "Reviewing reconstruction";
+  if (workspace.successorReview?.status === "changes-requested" && !workspace.interviewCompletedAt) {
+    return `Waiting on ${workspace.transition.person}`;
+  }
   if (!workspace.interviewCompletedAt) return critical.length ? `Adding context · ${critical.length} blocking` : "Adding missing context";
   if (workspace.successorReview?.status === "accepted") return "Handoff complete";
-  if (workspace.successorReview) return "Successor review in progress";
+  if (workspace.successorReview) return `Waiting on ${workspace.transition.successor}`;
   return "Ready for successor review";
 }
 
