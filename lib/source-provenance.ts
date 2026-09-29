@@ -52,7 +52,9 @@ export function relatedSourcesForGap(
   limit = 3,
 ): SourceReference[] {
   const queryTokens = tokens(`${gap.topic} ${gap.question}`);
-  const sources = workspace.transition.sources.filter((source) => source.kind !== "interview");
+  const sources = workspace.transition.sources.filter(
+    (source) => source.kind !== "interview" || source.provider === "Employee context",
+  );
   const byId = new Map(sources.map((source) => [source.id, source]));
   const exactSourceIds = (gap as GapWithSources).sourceIds?.filter((id) => byId.has(id)) ?? [];
 
