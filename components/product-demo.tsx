@@ -111,11 +111,11 @@ export function ProductDemo({ transition }: { transition: Transition }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+    <div className="understudy-demo-shell relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute -left-32 top-16 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute right-[-8rem] top-1/3 h-[28rem] w-[28rem] rounded-full bg-ok/8 blur-3xl" />
 
-      <header className="relative z-20 border-b border-white/30 bg-background/78 backdrop-blur-2xl">
+      <header className="understudy-topbar relative z-20 border-b border-white/30 bg-background/78 backdrop-blur-2xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
           <Link href="/" className="flex items-center gap-2.5 text-sm font-medium">
             <UnderstudyMark size={32} />
