@@ -53,9 +53,9 @@ const STEPS: Step[] = [
   },
   {
     key: "gaps",
-    label: "04 · Close gaps",
-    title: "Understudy asks only what it still can't figure out.",
-    body: "After reading the evidence, it gives the employee a short list of missing context that would otherwise disappear with them.",
+    label: "04 · Human context",
+    title: "The employee answers only what the evidence cannot.",
+    body: "Understudy has already read the work. It asks the current owner only for the missing rationale, exceptions, and unwritten context the successor would otherwise have to rediscover.",
   },
   {
     key: "record",
@@ -71,9 +71,9 @@ const STEPS: Step[] = [
   },
   {
     key: "verify",
-    label: "07 · Verify",
-    title: "Finish only when the successor can continue.",
-    body: "The successor confirms the transfer, leaves notes, or raises a missing question. A new blocking question reopens the handoff instead of hiding the gap.",
+    label: "07 · Successor check",
+    title: "The next owner either confirms the transfer or sends it back.",
+    body: "This screen belongs to the successor. They confirm each area only when they can genuinely continue, or raise a concern that reopens the handoff for the current owner.",
   },
   {
     key: "return",
@@ -315,8 +315,8 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                   <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold">Understudy has already read the evidence.</p>
-                        <p className="mt-1 text-xs leading-5 text-subtle">These are the only pieces of context it still cannot determine confidently.</p>
+                        <p className="text-sm font-semibold">{transition.person}, Understudy found 3 things only you can explain.</p>
+                        <p className="mt-1 text-xs leading-5 text-subtle">The documents already cover the rest. These are the only questions the next owner would otherwise have to rediscover.</p>
                       </div>
                       <div className="flex gap-2">
                         <SmallTag>3 left</SmallTag>
@@ -326,53 +326,48 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                   </div>
 
                   <div className="mt-4 flex gap-2 overflow-hidden">
-                    {["Refund policy exceptions", "Vendor renewal process", "Q4 launch context"].map((label, index) => (
-                      <span key={label} className={`rounded-full border px-3 py-1.5 text-[11px] font-medium ${index === 0 ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-background/75 text-subtle"}`}>
-                        {index + 1}. {label}
+                    {["Refund exceptions", "Vendor renewal", "Q4 launch context"].map((label, itemIndex) => (
+                      <span key={label} className={itemIndex === 0 ? "rounded-full border border-accent/25 bg-accent-soft px-3 py-1.5 text-[11px] font-medium text-accent" : "rounded-full border border-border bg-background/75 px-3 py-1.5 text-[11px] font-medium text-subtle"}>
+                        {itemIndex + 1}. {label}
                       </span>
                     ))}
                   </div>
 
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <div className="rounded-2xl border border-border bg-background/72 p-5">
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">Important for continuity</span>
-                        <span className="text-[11px] text-subtle">Refund policy</span>
-                      </div>
-                      <h3 className="mt-4 text-xl font-semibold tracking-[-0.03em]">What are the common exceptions to the refund policy?</h3>
-                      <p className="mt-2 text-xs leading-5 text-muted">Understudy found the standard policy and implementation notes, but none of them explain the edge cases you normally approve.</p>
+                  <div className="mt-4 rounded-2xl border border-border bg-background/72 p-5 sm:p-6">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">Important for continuity</span>
+                      <span className="text-[11px] text-subtle">Refund policy</span>
+                    </div>
+                    <h3 className="mt-4 text-xl font-semibold tracking-[-0.03em]">What are the common exceptions to the refund policy?</h3>
+                    <p className="mt-2 max-w-2xl text-xs leading-5 text-muted">Understudy found the standard policy and implementation notes, but none of them explain the edge cases you normally approve.</p>
 
-                      <div className="mt-4 rounded-xl border border-border bg-card p-4">
-                        <p className="text-xs text-faint">Explain what the next owner needs to know…</p>
-                        <div className="mt-14 flex items-center justify-between gap-3 border-t border-border pt-3">
-                          <div className="flex gap-2"><SmallTag>Dictate</SmallTag><SmallTag>Type answer</SmallTag></div>
-                          <span className="text-[11px] text-faint">Self-reported context</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <span className="text-xs text-subtle">I can’t answer this</span>
-                        <span className="rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white">Save and next question</span>
+                    <div className="mt-5 rounded-xl border border-border bg-card p-4">
+                      <p className="text-xs text-faint">Explain what {transition.successor} needs to know…</p>
+                      <div className="h-36" />
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+                        <div className="flex gap-2"><SmallTag>Dictate</SmallTag><SmallTag>Type answer</SmallTag></div>
+                        <span className="text-[11px] text-faint">Saved as employee-provided context</span>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="rounded-2xl border border-border bg-background/72 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Why this matters</p>
-                        <p className="mt-2 text-xs leading-5 text-muted">This answer fills a gap the source material cannot explain on its own.</p>
-                      </div>
-                      <div className="rounded-2xl border border-border bg-background/72 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
-                        <div className="mt-2 space-y-1.5 text-xs leading-5 text-muted">
-                          <p>✓ part of the handoff</p>
-                          <p>✓ searchable in Ask</p>
-                          <p>✓ visible with its source type</p>
-                        </div>
-                      </div>
-                      <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
-                        <p className="text-xs font-semibold text-accent">After question 3</p>
-                        <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff draft for successor verification.</p>
-                      </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-xs text-subtle">Related evidence is available if the employee wants to inspect it.</span>
+                      <span className="rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white">Save and next question</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border bg-background/72 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">Why Understudy asked</p>
+                      <p className="mt-2 text-xs leading-5 text-muted">The evidence does not explain this clearly enough.</p>
+                    </div>
+                    <div className="rounded-xl border border-border bg-background/72 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
+                      <p className="mt-2 text-xs leading-5 text-muted">Searchable handoff context with its provenance.</p>
+                    </div>
+                    <div className="rounded-xl border border-accent/15 bg-accent-soft/45 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">After the last answer</p>
+                      <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff for the successor to review.</p>
                     </div>
                   </div>
                 </motion.div>
@@ -446,30 +441,36 @@ export function ProductDemo({ transition }: { transition: Transition }) {
 
               {step.key === "verify" && (
                 <motion.div key="verify" initial={reducedMotion ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
-                  <div className="text-center">
-                    <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-6 w-6" /></span>
-                    <h3 className="mt-4 text-2xl font-semibold tracking-[-0.035em]">Can the successor continue the work?</h3>
-                    <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-muted">Verification is a real user action, not an AI score.</p>
+                  <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.1em] text-accent">For the next owner · {transition.successor}</p>
+                    <h3 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">Can you continue the work without {transition.person}?</h3>
+                    <p className="mt-2 max-w-2xl text-xs leading-5 text-muted">This is the successor's readiness check. It is not an AI score or HR approval. If something is unclear, the successor sends it back to the current owner as a blocking question.</p>
                   </div>
 
-                  <div className="mx-auto mt-6 max-w-2xl overflow-hidden rounded-2xl border border-border bg-background/70">
-                    {["I understand the role scope", "I understand the active work", "I know what I own", "I reviewed the risks", "I reviewed the open questions"].map((label, itemIndex) => (
-                      <div key={label} className={`flex items-center gap-3 p-4 ${itemIndex ? "border-t border-border" : ""}`}>
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-3.5 w-3.5" /></span>
-                        <span className="text-sm text-muted">{label}</span>
+                  <div className="mt-4 space-y-3">
+                    {[
+                      ["I understand the role scope", true],
+                      ["I understand the active work", true],
+                      ["I know what I own", false],
+                    ].map(([label, ready], itemIndex) => (
+                      <div key={String(label)} className={ready ? "rounded-2xl border border-ok/20 bg-ok/5 p-4" : "rounded-2xl border border-border bg-background/72 p-4"}>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                          <span className={ready ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ok text-white" : "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-xs text-subtle"}>{ready ? <IconCheck className="h-4 w-4" /> : itemIndex + 1}</span>
+                          <p className="min-w-0 flex-1 text-sm font-medium">{String(label)}</p>
+                          <div className="flex gap-2">
+                            {ready ? <span className="rounded-lg bg-ok/10 px-3 py-2 text-[11px] font-semibold text-ok">I can continue</span> : <>
+                              <span className="rounded-lg bg-accent px-3 py-2 text-[11px] font-semibold text-white">I can continue</span>
+                              <span className="rounded-lg border border-border px-3 py-2 text-[11px] font-semibold text-muted">I need clarification</span>
+                            </>}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="mx-auto mt-4 grid max-w-2xl gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
-                      <p className="text-sm font-medium">Something is still unclear?</p>
-                      <p className="mt-1 text-xs leading-5 text-subtle">Raise a follow-up. Understudy reopens the handoff so the gap cannot be hidden by completion.</p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-background/70 p-4">
-                      <p className="text-sm font-medium">Successor notes</p>
-                      <p className="mt-1 text-xs leading-5 text-subtle">Notes stay attached to the permanent record after acceptance.</p>
-                    </div>
+                  <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 p-4">
+                    <p className="text-sm font-semibold">What happens if the successor is not ready?</p>
+                    <p className="mt-1 text-xs leading-5 text-subtle">They describe what is unclear. Understudy adds that concern to the handoff, reopens the missing-context step for {transition.person}, and blocks final acceptance until it is resolved.</p>
                   </div>
                 </motion.div>
               )}
