@@ -153,37 +153,6 @@ export function LandingPage() {
             </div>
 
             <motion.div
-                        key={title}
-                        animate={reducedMotion ? undefined : { y: [0, index % 2 ? 2 : -2, 0] }}
-                        transition={{ duration: 5 + index, repeat: Infinity, ease: "easeInOut" }}
-                        className="rounded-2xl border border-border/80 bg-background/72 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="text-sm font-semibold">{title}</p>
-                          <span className="text-[11px] font-semibold text-accent">{score}</span>
-                        </div>
-                        <p className="mt-2 text-xs text-subtle">{meta}</p>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-accent/18 bg-accent-soft/55 p-4">
-                    <div className="flex items-center gap-2 text-accent">
-                      <IconAsk className="h-4 w-4" />
-                      <p className="text-xs font-semibold uppercase tracking-[0.08em]">Ask Understudy</p>
-                    </div>
-                    <p className="mt-2 text-sm font-medium">Why did we keep manual review in onboarding?</p>
-                    <p className="mt-2 text-xs leading-5 text-muted">Because automated checks were still inconclusive in some cases, and the team needed a safe fallback that kept onboarding moving.</p>
-                    <div className="mt-3 flex gap-2">
-                      <span className="rounded-lg border border-border bg-card px-2 py-1 text-[10px] text-subtle">PRD</span>
-                      <span className="rounded-lg border border-border bg-card px-2 py-1 text-[10px] text-subtle">Employee context</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <motion.div
               animate={reducedMotion ? undefined : { y: [0, -8, 0], rotate: [0, -0.7, 0] }}
               transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
               className="absolute -bottom-5 -left-3 hidden rounded-2xl border border-white/70 bg-card/92 px-4 py-3 shadow-xl backdrop-blur-xl sm:block"
