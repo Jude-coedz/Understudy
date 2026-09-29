@@ -121,6 +121,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
   const [voiceListening, setVoiceListening] = useState(false);
   const [usedVoice, setUsedVoice] = useState(false);
   const [showExceptions, setShowExceptions] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
   const [previewSourceId, setPreviewSourceId] = useState("");
 
   useEffect(() => {
@@ -143,122 +144,55 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
 
   useEffect(() => {
     if (!focus.length) {
-      setSelectedQuestion("");
-      return;
-    }
-    if (!focus.some((gap) => gap.question === selectedQuestion)) {
-      setSelectedQuestion(focus[0].question);
-      setAnswer("");
-      setUsedVoice(false);
-      setShowExceptions(false);
-    }
-  }, [focus, selectedQuestion]);
-
-  const current = focus.find((gap) => gap.question === selectedQuestion) ?? focus[0];
-  const currentIndex = current ? focus.findIndex((gap) => gap.question === current.question) : -1;
-  const minutes = estimatedInterviewMinutes(focus.length);
-  const references = useMemo(
-    () => current ? relatedSourcesForGap(workspace, current, 3) : [],
-    [workspace, current],
-  );
-  const previewSource = transition.sources.find((source) => source.id === previewSourceId) ?? null;
-  const modelBackedReview = workspace.roleEvidence?.usedModel !== false;
-
-  function chooseDisposition(status: InterviewGapDisposition) {
-    if (!current) return;
-    const nextQuestion = focus.find((gap) => gap.question !== current.question)?.question ?? "";
-    onWorkspaceChange({
-      ...workspace,
-      updatedAt: new Date().toISOString(),
-      interviewCompletedAt: undefined,
-      interviewGapStates: { ...states, [current.question]: { status, updatedAt: new Date().toISOString() } },
-    });
-    setSelectedQuestion(nextQuestion);
-    setAnswer("");
-    setUsedVoice(false);
-    setShowExceptions(false);
-    onMessage(status === "not-relevant" ? "Question removed as not relevant." : status === "ask-someone" ? "Marked as a follow-up for someone else." : status === "unknown" ? "Kept as an unresolved follow-up. It will not disappear from the handoff." : "Moved behind the other active questions.");
-  }
-
-  function restoreQuestion(question: string) {
-    const nextStates = { ...states };
-    delete nextStates[question];
-    onWorkspaceChange({ ...workspace, updatedAt: new Date().toISOString(), interviewCompletedAt: undefined, interviewGapStates: nextStates });
-    setSelectedQuestion(question);
-    setAnswer("");
-    setUsedVoice(false);
-  }
-
-  function finishGapReview() {
-    if (blocking.length || focus.length) return;
-    const now = new Date().toISOString();
-    onWorkspaceChange({ ...workspace, updatedAt: now, interviewCompletedAt: now });
-    onMessage(parked.length ? `Gap review finished with ${parked.length} visible follow-up${parked.length === 1 ? "" : "s"}.` : "Gap review complete. The handoff can now move to verification.");
-  }
-
-  async function submitAnswer() {
-    if (!current || !answer.trim() || busy || voiceListening) return;
-    setBusy(true);
-    onMessage("");
-    try {
-      const response = await fetch("/api/reconstruct", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          transition: {
-            person: transition.person,
-            role: transition.role,
-            department: transition.department,
-            successor: transition.successor,
-            targetDate: transition.targetDate,
-          },
-          source: {
-            title: `Handoff interview · ${current.topic}`,
-            text: answer.trim(),
-            provider: usedVoice ? "Understudy interview · voice" : "Understudy interview",
-            kind: "interview",
-          },
-          openGaps: transition.gaps,
-          primaryQuestion: current.question,
-        }),
-      });
-      const payload = (await response.json()) as { result?: ReconstructionResult; error?: string };
-      if (!response.ok || !payload.result) throw new Error(payload.error || "Could not process this answer.");
-      const next = mergeInterviewResult(workspace, payload.result, answer.trim());
-      onWorkspaceChange(next);
-      setAnswer("");
-      setUsedVoice(false);
-      setSelectedQuestion("");
-      setShowExceptions(false);
-      onMessage(payload.result.resolvedQuestions.length > 1 ? `Answer saved. It resolved ${payload.result.resolvedQuestions.length} related gaps.` : "Answer saved. Understudy is checking what remains.");
-    } catch (error) {
-      onMessage(error instanceof Error ? error.message : "Interview answer failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (!focus.length) {
     const hasCriticalFollowUp = blocking.length > 0;
+    const done = !hasCriticalFollowUp && !parked.length;
     return (
-      <motion.div initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-        <div className={`rounded-2xl border p-6 ${hasCriticalFollowUp ? "border-warning/30 bg-warning/5" : "border-ok/25 bg-ok/5"}`}>
-          <span className={`flex h-10 w-10 items-center justify-center rounded-full ${hasCriticalFollowUp ? "bg-warning/10 text-warning" : "bg-ok/10 text-ok"}`}><IconCheck /></span>
-          <h2 className="mt-4 text-xl font-medium tracking-tight">{hasCriticalFollowUp ? "A critical follow-up still blocks the handoff." : parked.length ? "Active questions are handled. Review the follow-ups before finishing." : "You have reached the end of the gap review."}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            {hasCriticalFollowUp
-              ? "Choosing “I don’t know” or “Someone else knows” does not make a critical question disappear. Bring it back when the answer is available."
-              : parked.length
-                ? `These ${parked.length} item${parked.length === 1 ? "" : "s"} will stay visible in the handoff as follow-ups. They are not being treated as resolved.`
-                : modelBackedReview
-                  ? "Understudy has no remaining active questions after the reviewed reconstruction. Finish this step explicitly before moving to handoff verification."
-                  : "This handoff was reconstructed in limited analysis mode. If no questions appear here, reconnect the evidence so Understudy can create the fallback continuity questions instead of treating missing synthesis as a clean review."}
-          </p>
+      <motion.div
+        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4"
+      >
+        <div className={`rounded-[24px] border p-6 sm:p-7 ${hasCriticalFollowUp ? "border-warning/25 bg-warning/5" : "border-ok/20 bg-ok/5"}`}>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="max-w-2xl">
+              <span className={`flex h-11 w-11 items-center justify-center rounded-full ${hasCriticalFollowUp ? "bg-warning/10 text-warning" : "bg-ok/10 text-ok"}`}>
+                <IconCheck />
+              </span>
+              <p className="mt-5 text-xs font-semibold uppercase tracking-[0.1em] text-subtle">
+                {hasCriticalFollowUp ? "One thing still needs an answer" : parked.length ? "Questions handled" : "Context complete"}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+                {hasCriticalFollowUp
+                  ? "A critical gap is still open."
+                  : parked.length
+                    ? "You have answered everything you can for now."
+                    : "Understudy has enough context to build the handoff."}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-muted">
+                {hasCriticalFollowUp
+                  ? "This question affects continuity, so marking it as unknown does not make it disappear. Bring it back when the right person can answer it."
+                  : parked.length
+                    ? `The remaining ${parked.length} follow-up${parked.length === 1 ? "" : "s"} will stay visible for the successor. They are not being treated as resolved.`
+                    : "There are no more active context questions. Finish this step and Understudy will assemble the handoff for successor review."}
+              </p>
+            </div>
+
+            {!hasCriticalFollowUp && (
+              <div className="min-w-[170px] rounded-2xl border border-border bg-card/80 p-4 text-left shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-faint">What happens next</p>
+                <p className="mt-2 text-sm font-semibold">Handoff draft</p>
+                <p className="mt-1 text-xs leading-5 text-subtle">Role summary, active work, risks, your answers, and source evidence.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {parked.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="border-b border-border px-5 py-4"><p className="text-sm font-medium">Follow-ups that remain open</p></div>
+            <div className="border-b border-border px-5 py-4">
+              <p className="text-sm font-semibold">Follow-ups that stay open</p>
+              <p className="mt-1 text-xs text-subtle">These remain visible in the final handoff so the next owner knows what still needs an answer.</p>
+            </div>
             <div className="divide-y divide-border">
               {parked.map((gap) => (
                 <div key={gap.question} className="flex items-start justify-between gap-4 p-4">
@@ -266,7 +200,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
                     <p className="text-sm leading-6 text-muted">{gap.question}</p>
                     <p className="mt-1 text-xs text-subtle">{states[gap.question]?.status === "ask-someone" ? "Someone else needs to answer" : "Answer not known yet"} · {gap.priority}</p>
                   </div>
-                  <button onClick={() => restoreQuestion(gap.question)} className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted hover:bg-background">Bring back</button>
+                  <button onClick={() => restoreQuestion(gap.question)} className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-medium text-muted hover:bg-background">Answer now</button>
                 </div>
               ))}
             </div>
@@ -274,26 +208,58 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
         )}
 
         {!hasCriticalFollowUp && !workspace.interviewCompletedAt && (
-          <button onClick={finishGapReview} className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-medium text-white">
-            {parked.length ? `Finish gap review with ${parked.length} follow-up${parked.length === 1 ? "" : "s"}` : modelBackedReview ? "Finish gap review" : "Finish limited gap review"}
+          <button onClick={finishGapReview} className="primary-action-depth inline-flex h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold text-white">
+            {parked.length ? `Finish with ${parked.length} open follow-up${parked.length === 1 ? "" : "s"}` : done ? "Build the handoff" : "Finish context review"}
           </button>
         )}
 
         {workspace.interviewCompletedAt && (
-          <div className="rounded-xl border border-ok/25 bg-ok/5 px-4 py-3 text-sm text-muted">Gap review finished. Continue to handoff verification when you are ready.</div>
+          <div className="flex items-center gap-3 rounded-xl border border-ok/20 bg-ok/5 px-4 py-3 text-sm text-muted">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-ok/10 text-ok"><IconCheck className="h-4 w-4" /></span>
+            <span><strong className="font-semibold text-foreground">Context review complete.</strong> Continue to the handoff draft below.</span>
+          </div>
         )}
       </motion.div>
     );
   }
 
+  const criticalRemaining = focus.filter((gap) => gap.priority === "Critical").length;
+  const whyCopy = references.length
+    ? "Understudy found related evidence, but none of it answers this clearly enough for the next owner."
+    : "This context does not appear in the evidence you provided, so Understudy needs it directly from a person.";
+
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-medium text-subtle">Question {currentIndex + 1} of up to {focus.length}</p>
-          <p className="mt-1 text-xs text-faint">About {minutes} minute{minutes === 1 ? "" : "s"} for this focus set</p>
+      <div className="mb-5 rounded-2xl border border-accent/15 bg-accent-soft/45 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Understudy has already read the evidence.</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">These are the only pieces of context it still cannot determine confidently. Answer them like you would explain the work to the person taking over.</p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted">{focus.length} left</span>
+            {criticalRemaining > 0 && <span className="rounded-full border border-danger/15 bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">{criticalRemaining} critical</span>}
+            <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-subtle">~{minutes} min</span>
+          </div>
         </div>
-        <div className="flex gap-1.5" aria-label="Interview progress">{focus.map((gap, index) => <span key={gap.question} className={`h-1.5 rounded-full transition-all ${index === currentIndex ? "w-8 bg-accent" : "w-3 bg-surface-3"}`} />)}</div>
+      </div>
+
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1" aria-label="Context questions">
+        {focus.map((gap, index) => (
+          <button
+            key={gap.question}
+            onClick={() => {
+              setSelectedQuestion(gap.question);
+              setAnswer("");
+              setUsedVoice(false);
+              setShowExceptions(false);
+              setShowEvidence(false);
+            }}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${gap.question === current?.question ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-card text-subtle hover:text-foreground"}`}
+          >
+            {index + 1}. {gap.topic}
+          </button>
+        ))}
       </div>
 
       <AnimatePresence mode="wait" initial={false}>
@@ -304,91 +270,130 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage }: Pr
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -10, scale: 0.997 }}
             transition={reducedMotion ? { duration: 0 } : { x: { type: "spring", stiffness: 390, damping: 34 }, opacity: { duration: 0.16 } }}
-            className="rounded-2xl border border-border-strong bg-card p-6 shadow-sm sm:p-7"
+            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_250px]"
           >
-            <div className="flex items-center gap-2 text-xs text-subtle"><span>Topic: {current.topic}</span><span>·</span><span className={current.priority === "Critical" ? "text-warning" : ""}>{current.priority}</span></div>
-            <h2 className="mt-4 max-w-2xl text-2xl font-medium leading-9 tracking-[-0.03em]">{current.question}</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-subtle">Answer it the way you would explain it to the person taking over. A short answer is fine if that is all the context needed.</p>
+            <div className="rounded-[24px] border border-border-strong bg-card p-5 shadow-sm sm:p-7">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${current.priority === "Critical" ? "bg-danger/8 text-danger" : "bg-warning/8 text-warning"}`}>
+                  {current.priority === "Critical" ? "Important for continuity" : "Useful context"}
+                </span>
+                <span className="text-xs text-subtle">{current.topic}</span>
+              </div>
 
-            {references.length > 0 && (
-              <div className="mt-5 rounded-xl border border-border bg-background p-4">
-                <p className="text-xs font-medium uppercase tracking-[0.08em] text-subtle">Why Understudy is asking</p>
-                <p className="mt-1 text-xs leading-5 text-faint">These are the files that directly support, or are most closely related to, the unresolved context behind this question.</p>
-                <div className="mt-3 space-y-2">
-                  {references.map((reference) => (
-                    <div key={reference.source.id} className="rounded-lg border border-border bg-card p-3">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{reference.source.title}</p>
-                          <p className="mt-0.5 text-xs text-subtle">{reference.reason}</p>
-                          <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted">{reference.snippet}</p>
+              <h2 className="mt-4 max-w-2xl text-2xl font-semibold leading-9 tracking-[-0.035em]">{current.question}</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">{whyCopy}</p>
+
+              {references.length > 0 && (
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowEvidence((value) => !value)}
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-accent"
+                  >
+                    <IconFile className="h-3.5 w-3.5" />
+                    {showEvidence ? "Hide related evidence" : `See the ${references.length} related source${references.length === 1 ? "" : "s"}`}
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {showEvidence && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                        <div className="mt-3 space-y-2 rounded-xl border border-border bg-background p-3">
+                          {references.map((reference) => (
+                            <div key={reference.source.id} className="flex items-start gap-3 rounded-lg bg-card p-3">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-border bg-background"><IconFile className="h-4 w-4 text-muted" /></span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium">{reference.source.title}</p>
+                                <p className="mt-0.5 text-xs text-subtle">{reference.reason}</p>
+                              </div>
+                              <button onClick={() => setPreviewSourceId(reference.source.id)} className="shrink-0 text-xs font-medium text-accent">Open</button>
+                            </div>
+                          ))}
                         </div>
-                        <button onClick={() => setPreviewSourceId(reference.source.id)} className="shrink-0 rounded-md border border-border px-2 py-1.5 text-xs text-muted hover:bg-background">View source</button>
-                      </div>
-                    </div>
-                  ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              <div className="mt-6 overflow-hidden rounded-xl border border-border bg-background transition-colors focus-within:border-border-strong">
+                <textarea
+                  value={answer}
+                  onChange={(event) => setAnswer(event.target.value)}
+                  rows={7}
+                  autoFocus
+                  placeholder="Explain what the next owner needs to know…"
+                  className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
+                />
+                <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <VoiceInput
+                    value={answer}
+                    onChange={setAnswer}
+                    onListeningChange={setVoiceListening}
+                    onVoiceUsed={() => setUsedVoice(true)}
+                    disabled={busy}
+                  />
+                  <span className="text-xs text-faint">{usedVoice ? "Voice captured. Edit anything before saving." : "Type it or dictate it."}</span>
                 </div>
               </div>
-            )}
 
-            <div className="mt-6 overflow-hidden rounded-xl border border-border bg-background transition-colors focus-within:border-border-strong">
-              <textarea
-                value={answer}
-                onChange={(event) => setAnswer(event.target.value)}
-                rows={7}
-                autoFocus
-                placeholder="Explain what they need to know…"
-                className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
-              />
-              <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                <VoiceInput
-                  value={answer}
-                  onChange={setAnswer}
-                  onListeningChange={setVoiceListening}
-                  onVoiceUsed={() => setUsedVoice(true)}
-                  disabled={busy}
-                />
-                <span className="text-xs text-faint">{usedVoice ? "Voice transcript captured. Review it before saving." : "Voice becomes editable text. Review it before saving."}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
-              <motion.button
-                whileHover={reducedMotion || busy || voiceListening ? undefined : { y: -1.5, scale: 1.01 }}
-                whileTap={reducedMotion ? undefined : { y: 0, scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
-                disabled={!answer.trim() || busy || voiceListening}
-                onClick={() => void submitAnswer()}
-                className="primary-action-depth inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-35"
-              >
-                <span className="relative z-10">{busy ? "Updating the handoff…" : voiceListening ? "Stop dictation to save" : "Save and continue"}</span>
-                <motion.span
-                  className="relative z-10"
-                  animate={busy && !reducedMotion ? { rotate: [0, 10, -8, 0], scale: [1, 1.08, 0.96, 1] } : undefined}
-                  transition={{ duration: 1.2, repeat: busy ? Infinity : 0 }}
+              <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <button type="button" onClick={() => setShowExceptions((value) => !value)} className="text-left text-sm text-subtle hover:text-muted">I can’t answer this</button>
+                <motion.button
+                  whileHover={reducedMotion || busy || voiceListening ? undefined : { y: -1.5, scale: 1.01 }}
+                  whileTap={reducedMotion ? undefined : { y: 0, scale: 0.97 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 28, mass: 0.65 }}
+                  disabled={!answer.trim() || busy || voiceListening}
+                  onClick={() => void submitAnswer()}
+                  className="primary-action-depth inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white disabled:opacity-35"
                 >
-                  <IconSpark />
-                </motion.span>
-              </motion.button>
+                  <span className="relative z-10">{busy ? "Updating handoff…" : voiceListening ? "Stop dictation to save" : focus.length > 1 ? "Save and next question" : "Save final answer"}</span>
+                  <IconSpark className="relative z-10 h-4 w-4" />
+                </motion.button>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {showExceptions && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                    <div className="mt-5 border-t border-border pt-4">
+                      <p className="text-xs font-semibold text-subtle">That’s okay. What should Understudy do with this question?</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {DISPOSITIONS.map((item) => (
+                          <button key={item.value} onClick={() => chooseDisposition(item.value)} className="rounded-xl border border-border bg-background p-3 text-left hover:border-border-strong hover:bg-card-hover">
+                            <p className="text-sm font-medium">{item.label}</p>
+                            <p className="mt-1 text-xs leading-5 text-subtle">{item.detail}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            <AnimatePresence initial={false}>
-              {showExceptions && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                  <div className="mt-5 border-t border-border pt-4">
-                    <p className="text-xs font-medium text-subtle">That’s okay. What should happen instead?</p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">{DISPOSITIONS.map((item) => <button key={item.value} onClick={() => chooseDisposition(item.value)} className="rounded-xl border border-border bg-background p-3 text-left hover:border-border-strong hover:bg-card-hover"><p className="text-sm font-medium">{item.label}</p><p className="mt-1 text-xs leading-5 text-subtle">{item.detail}</p></button>)}</div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <aside className="space-y-3">
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Why this matters</p>
+                <p className="mt-2 text-sm leading-6 text-muted">This answer fills a gap the source material could not explain on its own.</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
+                <div className="mt-3 space-y-2.5 text-xs leading-5 text-muted">
+                  <p>✓ self-reported context in the handoff</p>
+                  <p>✓ searchable later in Ask Understudy</p>
+                  <p>✓ available to the successor with its provenance</p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
+                <p className="text-xs font-semibold text-accent">After the last question</p>
+                <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff draft and sends it to successor verification.</p>
+              </div>
+            </aside>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {ranked.length > focus.length && <p className="mt-4 text-center text-xs leading-5 text-faint">Understudy is holding back {ranked.length - focus.length} lower-value question{ranked.length - focus.length === 1 ? "" : "s"} until this focus set is handled.</p>}
+      {ranked.length > focus.length && (
+        <p className="mt-4 text-center text-xs leading-5 text-faint">Understudy is holding back {ranked.length - focus.length} lower-priority question{ranked.length - focus.length === 1 ? "" : "s"} so this stays focused.</p>
+      )}
 
       <SourcePreviewDialog
         source={previewSource}
