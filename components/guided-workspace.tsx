@@ -27,6 +27,7 @@ import { AI_CONTEXT_SCOPES, type AIContextAssistant, type AIContextScope } from 
 import { IconAsk, IconCheck, IconChevronRight, IconFile, IconSpark, IconUpload } from "./icons";
 import { UnderstudyMark } from "./understudy-mark";
 import { AnalysisOverlay } from "./analysis-overlay";
+import { modelStatusCopy, type ModelStatus } from "@/lib/model-status";
 import { VoiceInput } from "./voice-input";
 
 type Stage = "sources" | "map" | "interview" | "handoff";
@@ -392,31 +393,40 @@ export function GuidedWorkspace() {
         },
       }),
     });
-    const payload = (await response.json()) as { result?: WholeRoleSynthesisResult; error?: string };
+    const payload = (await response.json()) as {
+      result?: WholeRoleSynthesisResult;
+      usedModel?: boolean;
+      modelStatus?: ModelStatus;
+      error?: string;
+    };
     if (!response.ok || !payload.result) throw new Error(payload.error || "Could not connect this evidence set.");
     const result = payload.result;
     const now = new Date().toISOString();
     return {
-      ...base,
-      updatedAt: now,
-      evidenceCollectionComplete: true,
-      evidenceCollectionCompletedAt: now,
-      roleEvidence: result.evidenceModel,
-      reviewedSourceIds: [],
-      interviewGapStates: {},
-      interviewCompletedAt: undefined,
-      successorReview: resetSuccessorReview(base),
-      transition: {
-        ...base.transition,
-        summary: result.summary,
-        projects: result.projects,
-        risks: result.risks,
-        gaps: result.gaps,
-        metrics: result.metrics,
-        readiness: result.readiness,
-        status: result.readiness >= 80 ? "Ready for review" : result.readiness >= 55 ? "In progress" : "Needs attention",
-      },
-    } satisfies PersonalWorkspace;
+      workspace: {
+        ...base,
+        updatedAt: now,
+        evidenceCollectionComplete: true,
+        evidenceCollectionCompletedAt: now,
+        roleEvidence: result.evidenceModel,
+        reviewedSourceIds: [],
+        interviewGapStates: {},
+        interviewCompletedAt: undefined,
+        successorReview: resetSuccessorReview(base),
+        transition: {
+          ...base.transition,
+          summary: result.summary,
+          projects: result.projects,
+          risks: result.risks,
+          gaps: result.gaps,
+          metrics: result.metrics,
+          readiness: result.readiness,
+          status: result.readiness >= 80 ? "Ready for review" : result.readiness >= 55 ? "In progress" : "Needs attention",
+        },
+      } satisfies PersonalWorkspace,
+      usedModel: Boolean(payload.usedModel),
+      modelStatus: payload.modelStatus,
+    };
   }
 
   async function finishEvidence() {
@@ -425,10 +435,16 @@ export function GuidedWorkspace() {
     setMessage("");
     const ticker = window.setInterval(() => setSynthesisPhase((phase) => Math.min(phase + 1, SYNTHESIS_PHASES.length - 1)), 900);
     try {
-      const next = await synthesizeRole(workspace);
+      const outcome = await synthesizeRole(workspace);
+      const next = outcome.workspace;
       persist(next);
       setStage("map");
-      setMessage(`Understudy connected ${roleSourcesFor(next).length} source${roleSourcesFor(next).length === 1 ? "" : "s"} into one role reconstruction. Review the overall interpretation once.`);
+      const modelCopy = modelStatusCopy(outcome.modelStatus);
+      setMessage(
+        outcome.usedModel
+          ? `Gemini synthesis completed. Understudy connected ${roleSourcesFor(next).length} source${roleSourcesFor(next).length === 1 ? "" : "s"} into one role reconstruction. Review the interpretation once.`
+          : `${modelCopy.title}. ${modelCopy.body}`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Evidence synthesis failed.");
     } finally {
@@ -460,12 +476,18 @@ export function GuidedWorkspace() {
         sourceBodies: { ...workspace.sourceBodies, [clarificationId]: contextDraft.trim() },
         transition: { ...workspace.transition, sources: [...withoutOldClarification, clarification] },
       };
-      const next = await synthesizeRole(base);
+      const outcome = await synthesizeRole(base);
+      const next = outcome.workspace;
       persist(next);
       setContextSourceId("");
       setContextDraft("");
       setStage("map");
-      setMessage(`Context for “${source.title}” was added as self-reported evidence and the reconstruction was updated. Review the overall map once.`);
+      const modelCopy = modelStatusCopy(outcome.modelStatus);
+      setMessage(
+        outcome.usedModel
+          ? `Context for “${source.title}” was added and Gemini refreshed the reconstruction. Review the overall map once.`
+          : `Context was saved, but ${modelCopy.title.toLowerCase()}. ${modelCopy.body}`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not add that source-specific context.");
     } finally {
