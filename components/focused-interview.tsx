@@ -343,6 +343,8 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
         </div>
       </div>
 
+      {criticalRemaining > 0 && <p className="-mt-2 mb-4 text-xs leading-5 text-subtle"><strong className="font-semibold text-foreground">Blocking</strong> means the handoff cannot safely close until the answer is known, usually because ownership, access, approval authority, an active commitment, or another high-consequence dependency is unclear.</p>}
+
       <div className="mb-5 flex gap-2 overflow-x-auto pb-1" aria-label="Context questions">
         {focus.map((gap, index) => (
           <button
