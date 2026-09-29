@@ -289,8 +289,10 @@ Important rules:
 3. If evidence is weak, lower coverage instead of guessing.
 4. Prefer 1-6 useful items over long generic lists.
 5. Gaps should become specific interview questions that a successor would benefit from.
-6. When source.kind is ai-context, treat it as recovered assistant output rather than verified primary evidence. Preserve useful rationale, but keep consequential ownership, commitment, stakeholder, and current-state claims open for verification when appropriate.
-7. Return JSON only.
+6. Use priority "Critical" ONLY when the missing answer would block a safe transfer of responsibility. Examples: unclear ownership, approval authority, access or credentials, escalation path, an active customer or stakeholder commitment, a deadline or dependency that can materially fail, or context directly tied to a High continuity risk. Use "Important" for useful rationale, history, preferences, lessons, or context that does not prevent the successor from continuing the work.
+7. A Critical gap should be phrased so it is obvious what cannot safely proceed until it is answered. Do not mark something Critical merely because it is interesting, incomplete, or mentioned in a risk.
+8. When source.kind is ai-context, treat it as recovered assistant output rather than verified primary evidence. Preserve useful rationale, but keep consequential ownership, commitment, stakeholder, and current-state claims open for verification when appropriate.
+9. Return JSON only.
 
 Return this shape:
 {
