@@ -10,6 +10,7 @@ import {
   type WorkspaceAskResponse,
 } from "@/lib/workspace-ask";
 import { workspaceQuestionSuggestions } from "@/lib/workspace-question-suggestions";
+import { modelStatusCopy } from "@/lib/model-status";
 import { IconFile, IconSpark } from "./icons";
 
 const THINKING_STATES = [
@@ -88,15 +89,30 @@ export function EmbeddedAskPanel({
     setActiveQuestion(q);
     setThinkingIndex(0);
 
-    const localFallback = fallbackWorkspaceAnswer(q, context, retrieveWorkspaceEvidence(q, context));
+    const retrievedEvidence = retrieveWorkspaceEvidence(q, context);
+    const localFallback = fallbackWorkspaceAnswer(q, context, retrievedEvidence);
     const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    const timeout = window.setTimeout(() => controller.abort(), 40_000);
 
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, context }),
+        body: JSON.stringify({
+          question: q,
+          context: {
+            ...context,
+            sources: context.sources.map(({ id, title, provider, kind }) => ({ id, title, provider, kind, body: "" })),
+          },
+          retrievedEvidence: retrievedEvidence.map(({ sourceId, title, provider, kind, excerpt, text }) => ({
+            sourceId,
+            title,
+            provider,
+            kind,
+            excerpt,
+            text,
+          })),
+        }),
         signal: controller.signal,
       });
       const raw = await response.text();
@@ -112,7 +128,8 @@ export function EmbeddedAskPanel({
       }
       setAnswer(payload);
       if (!payload.usedModel) {
-        setNotice("AI synthesis was unavailable, so Understudy is showing the most relevant evidence instead of inventing an answer.");
+        const copy = modelStatusCopy(payload.modelStatus);
+        setNotice(`${copy.title}. ${copy.body}`);
       }
       setText("");
     } catch (caught) {
