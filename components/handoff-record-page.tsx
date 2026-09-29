@@ -63,7 +63,7 @@ export function HandoffRecordPage() {
 
       <motion.main initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-4xl px-5 py-10 lg:px-8 lg:py-14">
         <div className="flex flex-col gap-4 border-b border-border pb-7 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Handoff record</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{transition.person} → {transition.successor}</h1><p className="mt-2 text-sm text-muted">{transition.role} · {transition.department}</p></div>
+          <div>{returnTo && <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-accent">Successor review · viewing the handoff as evidence</p>}<p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">Handoff record</p><h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{transition.person} → {transition.successor}</h1><p className="mt-2 text-sm text-muted">{transition.role} · {transition.department}</p></div>
           <span className={`inline-flex items-center gap-2 self-start rounded-full px-3 py-1.5 text-xs font-medium sm:self-auto ${accepted ? "bg-ok/10 text-ok" : "bg-warning/10 text-warning"}`}>{accepted && <IconCheck className="h-3.5 w-3.5" />}{accepted ? "Handoff complete" : "Handoff in progress"}</span>
         </div>
 
