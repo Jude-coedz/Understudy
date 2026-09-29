@@ -152,14 +152,7 @@ export function LandingPage() {
               </div>
             </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {[
-                      ["Approval workflows", "Active · ownership clear", "84%"],
-                      ["Merchant onboarding", "Decision context recovered", "76%"],
-                      ["Refund automation", "1 unanswered dependency", "62%"],
-                      ["Customer escalations", "Recurring responsibility", "71%"],
-                    ].map(([title, meta, score], index) => (
-                      <motion.div
+            <motion.div
                         key={title}
                         animate={reducedMotion ? undefined : { y: [0, index % 2 ? 2 : -2, 0] }}
                         transition={{ duration: 5 + index, repeat: Infinity, ease: "easeInOut" }}
