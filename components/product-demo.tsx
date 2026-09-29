@@ -243,7 +243,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                   <div className="flex flex-wrap gap-2">
                     <SmallTag>Upload files</SmallTag>
                     <SmallTag>Google Drive</SmallTag>
-                    <SmallTag>AI context</SmallTag>
+                    <SmallTag>Recover AI context</SmallTag>
                     <SmallTag>Paste text</SmallTag>
                     <SmallTag>Type or dictate</SmallTag>
                   </div>
@@ -306,6 +306,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                     ))}
                   </div>
                   <p className="mt-4 text-xs leading-5 text-subtle">Primary documents, AI-recovered context, and employee narration keep different provenance. Understudy does not silently turn all three into the same kind of truth.</p>
+                  <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 text-xs text-subtle"><IconMessage className="text-accent" /><span>If one source is missing an important explanation, add context directly to that source and refresh the reconstruction.</span></div>
                 </motion.div>
               )}
 
@@ -442,6 +443,7 @@ export function ProductDemo({ transition }: { transition: Transition }) {
                   <div>
                     <p className="text-xs font-medium uppercase tracking-[0.1em] text-subtle">My handoffs</p>
                     <h3 className="mt-2 text-2xl font-semibold tracking-[-0.035em]">The record still works after the handoff is over.</h3>
+                    <p className="mt-2 text-xs leading-5 text-subtle">With account sync enabled, the private handoff library is available again when you sign in on another device.</p>
                   </div>
 
                   <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background/70">
