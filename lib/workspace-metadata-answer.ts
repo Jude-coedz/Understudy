@@ -6,7 +6,9 @@ function response(question: string, answer: string): WorkspaceAskResponse {
 
 export function answerWorkspaceMetadata(question: string, context: WorkspaceAskContext): WorkspaceAskResponse | null {
   const q = question.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
-  const evidenceSources = context.sources.filter((source) => source.kind !== "interview");
+  const evidenceSources = context.sources.filter(
+    (source) => source.kind !== "interview" || source.provider === "Employee context",
+  );
   const documents = evidenceSources.filter((source) => source.kind === "document");
   const person = context.transition.person;
 
