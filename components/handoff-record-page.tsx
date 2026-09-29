@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { getCurrentWorkspace, type PersonalWorkspace } from "@/lib/personal-workspace";
 import { isDismissedInterviewGap } from "@/lib/interview-priority";
 import { EmbeddedAskPanel } from "./embedded-ask-panel";
@@ -12,8 +11,7 @@ import { UnderstudyMark } from "./understudy-mark";
 
 export function HandoffRecordPage() {
   const reducedMotion = useReducedMotion();
-  const searchParams = useSearchParams();
-  const returnTo = searchParams.get("returnTo") === "/review" ? "/review" : "";
+  const [returnTo, setReturnTo] = useState("");
   const returnLabel = returnTo ? "Back to successor review" : "My handoffs";
   const [workspace, setWorkspace] = useState<PersonalWorkspace | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -24,6 +22,8 @@ export function HandoffRecordPage() {
       setWorkspace(getCurrentWorkspace());
       setLoaded(true);
     };
+    const params = new URLSearchParams(window.location.search);
+    setReturnTo(params.get("returnTo") === "/review" ? "/review" : "");
     refresh();
     window.addEventListener("understudy:cloud-hydrated", refresh);
     window.addEventListener("understudy:workspace-saved", refresh);
