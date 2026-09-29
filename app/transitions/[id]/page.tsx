@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DemoHandoffWalkthrough } from "@/components/demo-handoff-walkthrough";
+import { ProductDemo } from "@/components/product-demo";
 import { getTransition } from "@/data/v2-demo";
 
 export default async function TransitionPage({
@@ -12,5 +12,5 @@ export default async function TransitionPage({
 
   if (!transition) notFound();
 
-  return <DemoHandoffWalkthrough transition={transition} />;
+  return <ProductDemo transition={transition} />;
 }
