@@ -17,7 +17,7 @@ export function NewHandoffFlow() {
   const [department, setDepartment] = useState("");
   const [successor, setSuccessor] = useState("");
   const [targetDate, setTargetDate] = useState("");
-  const [type, setType] = useState("Role transition");
+  const [type, setType] = useState("Role change");
   const [errors, setErrors] = useState<Errors>({});
 
   const formattedDate = useMemo(() => {
@@ -75,7 +75,7 @@ export function NewHandoffFlow() {
         <motion.div initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }}>
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-subtle">New handoff</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-0.05em] sm:text-5xl">Whose work is changing hands?</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-muted">Set the boundary once. On the next screen you can add files, paste work, choose Drive files, recover AI context, or combine all four.</p>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-muted">Set the boundary once. On the next screen, bring the work that already exists and add the context only the current owner can explain.</p>
 
           <div className="mt-8 grid gap-5 rounded-2xl border border-border bg-card p-5 shadow-sm sm:grid-cols-2 sm:p-6">
             {field("person", "Person handing over", person, setPerson, "e.g. Joe Adams")}
@@ -83,13 +83,13 @@ export function NewHandoffFlow() {
             {field("department", "Team / department", department, setDepartment, "e.g. Product")}
             {field("successor", "Next owner", successor, setSuccessor, "e.g. Priya or Product team")}
             <label className="block">
-              <span className="text-sm font-medium">Transition type</span>
+              <span className="text-sm font-medium">Handoff type</span>
               <div className="mt-2">
                 <UnderstudySelect
                   value={type}
-                  options={["Role transition", "Departure", "Leave coverage", "Team reallocation"]}
+                  options={["Role change", "Departure", "Leave coverage", "Team reallocation"]}
                   onChange={setType}
-                  label="Transition type"
+                  label="Handoff type"
                 />
               </div>
             </label>
