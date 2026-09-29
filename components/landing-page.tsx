@@ -9,7 +9,7 @@ const steps = [
   {
     number: "01",
     title: "Bring the work.",
-    body: "Add the documents, notes, Drive files, and AI context that already explain the role.",
+    body: "Add the documents, Drive files, AI context, and the employee’s own explanation of how the role actually worked.",
     icon: IconFile,
   },
   {
@@ -37,7 +37,7 @@ export function LandingPage() {
             <UnderstudyMark size={32} />
             Understudy
           </Link>
-          <div className="flex items-center gap-4"><Link href="/demo" className="text-sm font-medium text-muted transition-colors hover:text-foreground">See the demo</Link><Link href="/handoffs" className="text-sm font-medium text-muted transition-colors hover:text-foreground">My handoffs</Link></div>
+          <div className="flex items-center gap-4"><Link href="/demo" className="text-sm font-medium text-muted transition-colors hover:text-foreground">Guided demo</Link><Link href="/new" className="text-sm font-medium text-muted transition-colors hover:text-foreground">Try Understudy</Link></div>
         </div>
       </header>
 
@@ -49,9 +49,9 @@ export function LandingPage() {
             <motion.h1 initial={reducedMotion ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.05, duration: 0.45 }} className="mt-5 max-w-4xl text-5xl font-semibold tracking-[-0.06em] sm:text-6xl lg:text-7xl">Turn scattered work into a handoff someone can actually continue.</motion.h1>
             <motion.p initial={reducedMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.1, duration: 0.45 }} className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">Understudy reads the work that already exists, finds what would otherwise be lost, and helps the next owner verify the transfer.</motion.p>
             <motion.div initial={reducedMotion ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.15, duration: 0.4 }} className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/new" className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-medium text-white shadow-sm transition-transform hover:-translate-y-0.5">Start a handoff <IconChevronRight /></Link>
-              <Link href="/demo" className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-medium text-muted transition-colors hover:bg-card-hover hover:text-foreground"><IconSpark className="h-4 w-4" />Watch the guided demo</Link>
-              <Link href="/handoffs" className="inline-flex h-12 items-center rounded-xl px-3 text-sm font-medium text-muted transition-colors hover:text-foreground">View my handoffs</Link>
+              <Link href="/demo" className="inline-flex h-12 items-center gap-2 rounded-xl bg-accent px-5 text-sm font-medium text-white shadow-sm transition-transform hover:-translate-y-0.5"><IconSpark className="h-4 w-4" />Watch the guided demo</Link>
+              <Link href="/new" className="inline-flex h-12 items-center gap-2 rounded-xl border border-border bg-card px-5 text-sm font-medium text-muted transition-colors hover:bg-card-hover hover:text-foreground">Try a handoff <IconChevronRight /></Link>
+              <Link href="/handoffs" className="inline-flex h-12 items-center rounded-xl px-3 text-sm font-medium text-muted transition-colors hover:text-foreground">My handoffs</Link>
             </motion.div>
           </div>
         </section>
