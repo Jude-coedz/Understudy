@@ -28,6 +28,13 @@ export function FocusedAskPage() {
           </div>
         </div>
       </header>
+      {returnTo && (
+        <div className="mx-auto max-w-5xl px-5 pt-5 lg:px-8">
+          <div className="rounded-xl border border-accent/15 bg-accent-soft/45 px-4 py-3 text-xs leading-5 text-muted">
+            <strong className="font-semibold text-foreground">Successor review context.</strong> You are still reviewing the handoff as the next owner. Asking a question here does not switch you into the current owner&apos;s workflow.
+          </div>
+        </div>
+      )}
       <AskView />
     </div>
   );
