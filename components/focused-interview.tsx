@@ -332,8 +332,8 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
       <div className="mb-5 rounded-2xl border border-accent/15 bg-accent-soft/45 p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold">Understudy has already read the evidence.</p>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">These are the only pieces of context it still cannot determine confidently. Answer them like you would explain the work to the person taking over.</p>
+            <p className="text-sm font-semibold">{transition.person}, Understudy found {focus.length} thing{focus.length === 1 ? "" : "s"} only you can explain.</p>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">The evidence already covers the rest. Give {transition.successor} the missing context they would otherwise have to rediscover after you leave.</p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-muted">{focus.length} left</span>
@@ -369,7 +369,7 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={reducedMotion ? { opacity: 1 } : { opacity: 0, x: -10, scale: 0.997 }}
             transition={reducedMotion ? { duration: 0 } : { x: { type: "spring", stiffness: 390, damping: 34 }, opacity: { duration: 0.16 } }}
-            className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_250px]"
+            className="space-y-4"
           >
             <div className="rounded-[24px] border border-border-strong bg-card p-5 shadow-sm sm:p-7">
               <div className="flex flex-wrap items-center gap-2">
@@ -413,10 +413,10 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
                 <textarea
                   value={answer}
                   onChange={(event) => setAnswer(event.target.value)}
-                  rows={7}
+                  rows={10}
                   autoFocus
-                  placeholder="Explain what the next owner needs to know…"
-                  className="w-full resize-none bg-transparent p-4 text-sm leading-6 outline-none placeholder:text-faint"
+                  placeholder={"Explain what " + transition.successor + " needs to know…"}
+                  className="min-h-[260px] w-full resize-y bg-transparent p-5 text-sm leading-7 outline-none placeholder:text-faint"
                 />
                 <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                   <VoiceInput value={answer} onChange={setAnswer} onListeningChange={setVoiceListening} onVoiceUsed={() => setUsedVoice(true)} disabled={busy} />
@@ -458,24 +458,20 @@ export function FocusedInterview({ workspace, onWorkspaceChange, onMessage, onCo
               </AnimatePresence>
             </div>
 
-            <aside className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Why this matters</p>
-                <p className="mt-2 text-sm leading-6 text-muted">This answer fills a gap the source material could not explain on its own.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">Why Understudy asked</p>
+                <p className="mt-2 text-xs leading-5 text-muted">The source material does not explain this clearly enough for {transition.successor} to act on.</p>
               </div>
               <div className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
-                <div className="mt-3 space-y-2.5 text-xs leading-5 text-muted">
-                  <p>✓ self-reported context in the handoff</p>
-                  <p>✓ searchable later in Ask Understudy</p>
-                  <p>✓ available to the successor with its provenance</p>
-                </div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
+                <p className="mt-2 text-xs leading-5 text-muted">Self-reported handoff context that stays searchable in Ask Understudy with its provenance.</p>
               </div>
               <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
-                <p className="text-xs font-semibold text-accent">After the last question</p>
-                <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff draft and sends it to successor verification.</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-accent">After the last answer</p>
+                <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff draft for {transition.successor} to review.</p>
               </div>
-            </aside>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
