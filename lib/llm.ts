@@ -1,7 +1,13 @@
 import type { ModelFailureReason, ModelStatus } from "@/lib/model-status";
 
 const DEFAULT_MODEL = "gemini-3.1-flash-lite";
-const MODEL_TIMEOUT_MS = 15_000;
+const MODEL_TIMEOUT_MS = 20_000;
+
+type CompletionOptions = {
+  timeoutMs?: number;
+  maxOutputTokens?: number;
+  temperature?: number;
+};
 
 type GeminiResponse = {
   candidates?: Array<{
@@ -46,8 +52,15 @@ function textOf(response: GeminiResponse): string {
     .trim();
 }
 
-function runtimeModel() {
+export function runtimeModel() {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_MODEL;
+}
+
+export function modelRuntimeInfo() {
+  return {
+    configured: Boolean(process.env.GEMINI_API_KEY?.trim()),
+    model: runtimeModel(),
+  };
 }
 
 function failureForStatus(status: number): { reason: ModelFailureReason; retryable: boolean } {
@@ -60,6 +73,7 @@ function failureForStatus(status: number): { reason: ModelFailureReason; retryab
 export async function completeJsonDetailed<T>(
   system: string,
   user: string,
+  options: CompletionOptions = {},
 ): Promise<GeminiCallResult<T>> {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
@@ -71,7 +85,7 @@ export async function completeJsonDetailed<T>(
 
   const model = runtimeModel();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? MODEL_TIMEOUT_MS);
 
   try {
     const response = await fetch(
@@ -94,8 +108,8 @@ export async function completeJsonDetailed<T>(
           ],
           generationConfig: {
             responseMimeType: "application/json",
-            maxOutputTokens: 2500,
-            temperature: 0.2,
+            maxOutputTokens: options.maxOutputTokens ?? 3500,
+            temperature: options.temperature ?? 0.2,
           },
         }),
         signal: controller.signal,
