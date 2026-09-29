@@ -53,9 +53,9 @@ const STEPS: Step[] = [
   },
   {
     key: "gaps",
-    label: "04 · Fill gaps",
-    title: "Ask only what is still missing.",
-    body: "Instead of a generic exit questionnaire, Understudy asks targeted questions about the context a successor would otherwise have to rediscover.",
+    label: "04 · Close gaps",
+    title: "Understudy asks only what it still can't figure out.",
+    body: "After reading the evidence, it gives the employee a short list of missing context that would otherwise disappear with them.",
   },
   {
     key: "record",
@@ -312,32 +312,68 @@ export function ProductDemo({ transition }: { transition: Transition }) {
 
               {step.key === "gaps" && (
                 <motion.div key="gaps" initial={reducedMotion ? false : { opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">Questions only a human can answer</p>
-                      <p className="mt-1 text-xs text-subtle">Generated after Understudy reads the full evidence set.</p>
+                  <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Understudy has already read the evidence.</p>
+                        <p className="mt-1 text-xs leading-5 text-subtle">These are the only pieces of context it still cannot determine confidently.</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <SmallTag>3 left</SmallTag>
+                        <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">1 critical</span>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">{criticalGaps.length} critical</span>
                   </div>
 
-                  <div className="mt-5 space-y-3">
-                    {transition.gaps.slice(0, 3).map((gap, gapIndex) => (
-                      <div key={gap.question} className={`rounded-2xl border p-5 ${gapIndex === 0 ? "border-accent/30 bg-accent-soft" : "border-border bg-background/70"}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-xs font-medium text-subtle">{gap.topic}</span>
-                          <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${gap.priority === "Critical" ? "bg-danger/10 text-danger" : "bg-warning/10 text-warning"}`}>{gap.priority}</span>
-                        </div>
-                        <p className="mt-3 text-sm font-medium leading-6">{gap.question}</p>
-                        {gapIndex === 0 && (
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            <SmallTag>Answer</SmallTag>
-                            <SmallTag>Dictate</SmallTag>
-                            <SmallTag>Ask someone else</SmallTag>
-                            <SmallTag>Not relevant</SmallTag>
-                          </div>
-                        )}
-                      </div>
+                  <div className="mt-4 flex gap-2 overflow-hidden">
+                    {["Refund policy exceptions", "Vendor renewal process", "Q4 launch context"].map((label, index) => (
+                      <span key={label} className={`rounded-full border px-3 py-1.5 text-[11px] font-medium ${index === 0 ? "border-accent/25 bg-accent-soft text-accent" : "border-border bg-background/75 text-subtle"}`}>
+                        {index + 1}. {label}
+                      </span>
                     ))}
+                  </div>
+
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="rounded-2xl border border-border bg-background/72 p-5">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-danger/8 px-2.5 py-1 text-[11px] font-semibold text-danger">Important for continuity</span>
+                        <span className="text-[11px] text-subtle">Refund policy</span>
+                      </div>
+                      <h3 className="mt-4 text-xl font-semibold tracking-[-0.03em]">What are the common exceptions to the refund policy?</h3>
+                      <p className="mt-2 text-xs leading-5 text-muted">Understudy found the standard policy and implementation notes, but none of them explain the edge cases you normally approve.</p>
+
+                      <div className="mt-4 rounded-xl border border-border bg-card p-4">
+                        <p className="text-xs text-faint">Explain what the next owner needs to know…</p>
+                        <div className="mt-14 flex items-center justify-between gap-3 border-t border-border pt-3">
+                          <div className="flex gap-2"><SmallTag>Dictate</SmallTag><SmallTag>Type answer</SmallTag></div>
+                          <span className="text-[11px] text-faint">Self-reported context</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3">
+                        <span className="text-xs text-subtle">I can’t answer this</span>
+                        <span className="rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white">Save and next question</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="rounded-2xl border border-border bg-background/72 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Why this matters</p>
+                        <p className="mt-2 text-xs leading-5 text-muted">This answer fills a gap the source material cannot explain on its own.</p>
+                      </div>
+                      <div className="rounded-2xl border border-border bg-background/72 p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Your answer becomes</p>
+                        <div className="mt-2 space-y-1.5 text-xs leading-5 text-muted">
+                          <p>✓ part of the handoff</p>
+                          <p>✓ searchable in Ask</p>
+                          <p>✓ visible with its source type</p>
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-accent/15 bg-accent-soft/45 p-4">
+                        <p className="text-xs font-semibold text-accent">After question 3</p>
+                        <p className="mt-2 text-xs leading-5 text-muted">Understudy builds the handoff draft for successor verification.</p>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               )}
