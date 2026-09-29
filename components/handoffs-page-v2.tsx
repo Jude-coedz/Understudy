@@ -81,18 +81,11 @@ export function HandoffsPageV2() {
           <div className="flex flex-wrap gap-2"><Link href="/demo" className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card px-4 text-sm font-medium text-muted sm:hidden">See demo</Link><Link href="/new" className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white"><IconPlus /> New handoff</Link></div>
         </div>
 
-        <div className={`mt-6 rounded-2xl border p-4 ${accountMode ? "border-ok/20 bg-ok/5" : "border-border bg-card"}`}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium">{accountMode ? "Synced to your account" : "Private to this browser"}</p>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-subtle">
-                {accountMode
-                  ? `These handoffs can load on another device only after signing into the same${identity?.email ? ` ${identity.email}` : ""} account. The app URL itself does not expose them.`
-                  : "These handoffs live in this browser's local storage. Opening the same Understudy URL on another computer will not show them."}
-              </p>
-            </div>
-            <span className="shrink-0 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-subtle">{accountMode ? "Account private" : "Browser only"}</span>
-          </div>
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-subtle">
+          <span className={`h-2 w-2 rounded-full ${accountMode ? "bg-ok" : "bg-faint"}`} />
+          <span>{accountMode ? "Handoffs are synced privately to your account." : "This trial is saved privately in this browser."}</span>
+          <span className="text-faint">·</span>
+          <CloudAccountControl compact />
         </div>
 
         {sorted.length ? (
